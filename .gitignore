@@ -1,0 +1,11 @@
+# Ignore virtual environment 
+vaeeg/
+# Ignore custom vs code settings 
+.vscode/
+# Ignore EEG data 
+/raw_data/
+# Ignore processed data 
+/new_data/
+# Ignore temporary files or caches 
+*.pyc
+__pycache__/
