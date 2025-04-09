@@ -1,93 +1,90 @@
-import json
 import os
+import json
 import random
 import numpy as np
 from tqdm import tqdm
 
-# Assuming get_files is defined in src/utils/io.py; update the import if needed.
-from src.utils.io import get_files
-
-def merge_data_from_single_file(in_file, out_dir, train_ratio=0.9):
+def split_channel_data(channel_folder, train_ratio=0.9):
     """
-    Load a single .npy file, split it into training and test portions,
-    and save each frequency band separately.
+    For a given channel folder, load each frequency band .npy file,
+    shuffle and split the data into training and test sets.
     
     Args:
-        in_file: str, path to the single .npy file.
-        out_dir: str, base directory where "train" and "test" subfolders will be created.
-        train_ratio: float, proportion of data to use for training.
+        channel_folder: str, path to the channel folder (e.g., new_data/single_channel_segments/channel_1)
+        train_ratio: float, proportion of data to assign to training.
+        
+    Returns:
+        A dictionary with keys as band names and values as dicts with keys "train" and "test" holding the file paths.
     """
-    # Load the single merged file (assumed shape: (N, 6, L))
-    full_data = np.load(in_file)
-    num_segments = full_data.shape[0]
-    n_train = int(train_ratio * num_segments)
-    train_data = full_data[:n_train]
-    test_data = full_data[n_train:]
-    
-    print(f"Total segments: {num_segments}, Training segments: {n_train}, Test segments: {num_segments - n_train}")
-
-    # Define band names corresponding to axis=1
+    # List of expected frequency band file names (without extension)
     band_names = ["whole", "delta", "theta", "alpha", "low_beta", "high_beta"]
+    split_paths = {}
     
-    # Create output directories for train and test if they don't exist
-    train_dir = os.path.join(out_dir, "train")
-    test_dir = os.path.join(out_dir, "test")
-    if not os.path.isdir(train_dir):
-        os.makedirs(train_dir)
-    if not os.path.isdir(test_dir):
-        os.makedirs(test_dir)
+    for band in band_names:
+        file_path = os.path.join(channel_folder, f"{band}.npy")
+        if not os.path.exists(file_path):
+            print(f"Warning: {file_path} not found, skipping band '{band}'.")
+            continue
+        
+        data = np.load(file_path)
+        num_segments = data.shape[0]
+        indices = np.arange(num_segments)
+        np.random.shuffle(indices)
+        n_train = int(train_ratio * num_segments)
+        train_data = data[indices[:n_train]]
+        test_data = data[indices[n_train:]]
+        
+        split_paths[band] = {"train": train_data, "test": test_data}
+        print(f"Channel '{os.path.basename(channel_folder)}', band '{band}': Total: {num_segments}, "
+              f"Train: {train_data.shape[0]}, Test: {test_data.shape[0]}")
+        
+    return split_paths
+
+def save_split_data(channel_name, split_dict, base_out_dir):
+    """
+    Save the split data for a single channel into the appropriate train/test folders.
     
-    # For each band, extract that slice and save separately for train and test
-    for i, name in enumerate(band_names):
-        train_file = os.path.join(train_dir, name + ".npy")
-        test_file = os.path.join(test_dir, name + ".npy")
-        np.save(train_file, train_data[:, i, :])
-        np.save(test_file, test_data[:, i, :])
-        print(f"Saved band '{name}' to train: {train_file} and test: {test_file}")
+    Args:
+        channel_name: str, e.g., "channel_1"
+        split_dict: dict, output from split_channel_data.
+        base_out_dir: str, base directory for output (e.g., new_data)
+    """
+    # Create channel-specific folders inside both train and test directories.
+    train_channel_dir = os.path.join(base_out_dir, "train", channel_name)
+    test_channel_dir = os.path.join(base_out_dir, "test", channel_name)
+    os.makedirs(train_channel_dir, exist_ok=True)
+    os.makedirs(test_channel_dir, exist_ok=True)
+    
+    for band, data_dict in split_dict.items():
+        train_path = os.path.join(train_channel_dir, f"{band}.npy")
+        test_path = os.path.join(test_channel_dir, f"{band}.npy")
+        np.save(train_path, data_dict["train"])
+        np.save(test_path, data_dict["test"])
+        print(f"Saved {band}: train -> {train_path}, test -> {test_path}")
 
 if __name__ == "__main__":
-    base_dir = "./new_data/"
-    # We assume that the single merged file is in the "clips" subfolder.
-    merged_file = os.path.join(base_dir, "clips", "VAEEG.npy")
-    path_file = os.path.join(base_dir, "dataset_paths.json")
+    # Input directory containing channel folders (each channel folder contains 6 .npy files)
+    input_base_dir = "./new_data/single_channel_segments_downsampled"
+    # Output base directory where train/ and test/ folders will be created
+    out_base_dir = "./new_data_downsampled"
+    train_ratio = 0.9
     
-    # Check if there is only one file in the clips folder
-    files = get_files(os.path.join(base_dir, "clips"), [".npy"])
+    # Get list of channel directories inside the input base directory.
+    channel_folders = [os.path.join(input_base_dir, d) for d in os.listdir(input_base_dir)
+                       if os.path.isdir(os.path.join(input_base_dir, d))]
     
-    if len(files) == 0:
-        raise ValueError("No .npy files found in ./new_data/clips")
-    elif len(files) == 1:
-        print("Only one file found. Splitting the single merged file into train and test.")
-        merge_data_from_single_file(files[0], base_dir, train_ratio=0.9)
-        # Write a simple JSON log indicating that train and test were split from the single file.
-        split_info = {"train": "split from single file", "test": "split from single file"}
-        with open(path_file, "w") as fo:
-            json.dump(split_info, fp=fo, indent=1)
-    else:
-        # If there are multiple files, use the original approach.
-        random.shuffle(files)
-        ratio = 0.1
-        n_train = int((1.0 - ratio) * len(files))
-        train_paths = files[:n_train]
-        test_paths = files[n_train:]
-        with open(path_file, "w") as fo:
-            json.dump({"train": train_paths, "test": test_paths}, fp=fo, indent=1)
-        # merge_data is assumed to merge multiple files; call it on train and test lists.
-        def merge_data(input_paths, out_dir):
-            band_names = ["whole", "delta", "theta", "alpha",  "low_beta", "high_beta"]
-            # Load all files and concatenate along axis=0
-            data = [np.load(f) for f in tqdm(input_paths)]
-            data = np.concatenate(data, axis=0)
-            np.random.shuffle(data)
-            for i, name in enumerate(band_names):
-                out_file = os.path.join(out_dir, name + ".npy")
-                sx = data[:, i, :]
-                np.save(out_file, sx)
-        test_dir = os.path.join(base_dir, "test")
-        if not os.path.isdir(test_dir):
-            os.makedirs(test_dir)
-        merge_data(test_paths, test_dir)
-        train_dir = os.path.join(base_dir, "train")
-        if not os.path.isdir(train_dir):
-            os.makedirs(train_dir)
-        merge_data(train_paths, train_dir)
+    dataset_split = {}
+    
+    for ch_folder in tqdm(channel_folders, desc="Processing channels"):
+        channel_name = os.path.basename(ch_folder)
+        split_dict = split_channel_data(ch_folder, train_ratio=train_ratio)
+        save_split_data(channel_name, split_dict, out_base_dir)
+        dataset_split[channel_name] = {band: {"train": os.path.join("train", channel_name, f"{band}.npy"),
+                                               "test": os.path.join("test", channel_name, f"{band}.npy")}
+                                        for band in split_dict.keys()}
+    
+    # Optionally, save a JSON log of the dataset split paths
+    json_path = os.path.join(out_base_dir, "dataset_paths.json")
+    with open(json_path, "w") as f:
+        json.dump(dataset_split, f, indent=2)
+    print("Dataset split info saved to:", json_path)

@@ -4,6 +4,7 @@ import itertools
 import os
 import sys
 import time
+from tqdm import tqdm
 
 import torch
 import torch.utils.data
@@ -11,14 +12,15 @@ import yaml
 from torch import optim
 from torch.utils.tensorboard import SummaryWriter
 
+# Ensure the project root is on the path
 _CURRENT_DIR = os.path.abspath(os.path.dirname(__file__))
 sys.path.append(_CURRENT_DIR)
 
-from src.model.opts.dataset import ClipDataset
-from src.model.opts.ckpt import save_model, init_model
-from src.model.opts.viz import batch_imgs
-from src.model.net.modelA import VAEEG
-from src.model.net.losses import recon_loss, kl_loss
+from model.opts.dataset import ClipDataset
+from model.opts.ckpt import save_model, init_model
+from model.opts.viz import batch_imgs
+from model.net.modelA import VAEEG
+from model.net.losses import recon_loss, kl_loss
 
 torch.autograd.set_detect_anomaly(True)
 
@@ -28,7 +30,6 @@ def save_loss_per_line(target_file, line, header):
         # read first and check if empty
         with open(target_file, "r") as fi:
             dat = [line.strip() for line in fi.readlines() if line.strip() != ""]
-
         # new records
         if len(dat) == 0 or dat[0] != header:
             with open(target_file, "w") as fo:
@@ -75,7 +76,6 @@ class Estimator(object):
         current_epoch = self.aux.get("current_epoch", 0)
         current_step = self.aux.get("current_step", 0)
 
-       
         optimizer = optim.RMSprop(itertools.chain(self.model.encoder.parameters(),
                                                   self.model.decoder.parameters()),
                                   lr=lr)
@@ -83,15 +83,13 @@ class Estimator(object):
         self.model.train()
         start_time = time.time()
 
-        for ie in range(n_epoch):
-            current_epoch = current_epoch + 1
-            for idx, input_x in enumerate(input_loader, 0):
-                current_step = current_step + 1
-                input_x = input_x.to(self.device)
-
-              
+        for ie in tqdm(range(n_epoch), desc="Epochs"):
+            current_epoch += 1
+            # Optionally wrap the inner loop with tqdm, providing the total length of the data loader.
+            for idx, input_x in enumerate(tqdm(input_loader, total=len(input_loader), leave=False, desc="Batches")):
+                current_step += 1
+                input_x = input_x.float()
                 mu, log_var, xbar = self.model(input_x)
-              
                 kld = kl_loss(mu, log_var)
                 rec = recon_loss(input_x, xbar)
                 loss = beta * kld + rec
@@ -101,13 +99,11 @@ class Estimator(object):
                 optimizer.step()
 
                 if current_step % n_print == 0:
-                  
                     writer.add_scalar('loss', loss, current_step)
                     writer.add_scalar('kld_loss', kld, current_step)
                     writer.add_scalar('rec_loss', rec, current_step)
 
-                    error = input_x - xbar
-                    error = error.abs().mean()
+                    error = (input_x - xbar).abs().mean()
                     writer.add_scalar('mae error', error, current_step)
 
                     pr = self.pearson_index(input_x, xbar)
@@ -116,25 +112,24 @@ class Estimator(object):
                     cycle_time = (time.time() - start_time) / n_print
 
                     values = (current_epoch, current_step, cycle_time,
-                              loss.to(torch.device("cpu")).detach().numpy(),
-                              # gen_loss.to(torch.device("cpu")).detach().numpy(),
-                              kld.to(torch.device("cpu")).detach().numpy(),
-                              rec.to(torch.device("cpu")).detach().numpy(),
-                              error.to(torch.device("cpu")).detach().numpy(),
-                              pr.mean().to(torch.device("cpu")).detach().numpy())
+                            loss.cpu().detach().numpy(),
+                            kld.cpu().detach().numpy(),
+                            rec.cpu().detach().numpy(),
+                            error.cpu().detach().numpy(),
+                            pr.mean().cpu().detach().numpy())
 
                     names = ["current_epoch", "current_step", "cycle_time",
-                             "loss", "kld_loss", "rec_loss",
-                             "error", "pr"]
+                            "loss", "kld_loss", "rec_loss",
+                            "error", "pr"]
 
                     print("[Epoch %d, Step %d]: (%.3f s / cycle])\n"
-                          "  loss: %.3f; kld_loss: %.3f; rec: %.3f;\n"
-                          "  mae error: %.3f; pr: %.3f.\n"
-                          % values)
+                        "  loss: %.3f; kld_loss: %.3f; rec: %.3f;\n"
+                        "  mae error: %.3f; pr: %.3f.\n"
+                        % values)
 
-                    img = batch_imgs(input_x.to(torch.device("cpu")).detach().numpy()[:, 0, :],
-                                     xbar.to(torch.device("cpu")).detach().numpy()[:, 0, :],
-                                     256, 4, 2, fig_size=(8, 5))
+                    img = batch_imgs(input_x.cpu().detach().numpy()[:, 0, :],
+                                    xbar.cpu().detach().numpy()[:, 0, :],
+                                    2048, 4, 2, fig_size=(8, 5))
                     writer.add_image("signal", img, current_step, dataformats="HWC")
                     start_time = time.time()
 
@@ -144,17 +139,18 @@ class Estimator(object):
 
             out_ckpt_file = os.path.join(model_dir, "ckpt_epoch_%d.ckpt" % current_epoch)
             save_model(self.model, out_file=out_ckpt_file,
-                       auxiliary=dict(current_step=current_step,
-                                      current_epoch=current_epoch))
+                    auxiliary=dict(current_step=current_step,
+                                    current_epoch=current_epoch))
         writer.close()
+
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Training Model')
     parser.add_argument('--yaml_file', type=str, required=True,
-                        help="configures, path of .yaml file")
+                        help="Path to the YAML configuration file")
     parser.add_argument('--z_dim', type=int, required=True,
-                        help="z_dim")
+                        help="Latent space dimension")
     opts = parser.parse_args()
 
     with open(opts.yaml_file, 'r') as file:
@@ -163,37 +159,50 @@ if __name__ == "__main__":
     train_params = configs["Train"]
     model_params = configs["Model"]
     dataset_params = configs["DataSet"]
+    # Update z_dim in the configuration based on the command-line argument.
     model_params["z_dim"] = opts.z_dim
 
-    if not os.path.isdir(train_params["model_dir"]):
-        os.makedirs(train_params["model_dir"])
+    # Define the frequency bands that you want to train on.
+    bands = ["delta", "theta", "alpha", "low_beta", "high_beta"]
 
-    # config model
-    model = VAEEG(in_channels=model_params["in_channels"],
-                     z_dim=model_params["z_dim"],
-                     negative_slope=model_params["negative_slope"],
-                     decoder_last_lstm=model_params["decoder_last_lstm"])
-
-    # init estimator
-    est = Estimator(model, train_params["n_gpus"], train_params["ckpt_file"])
-    m_dir = os.path.join(train_params["model_dir"],
-                         "%s_z%d" % (os.path.basename(os.path.splitext(opts.yaml_file)[0]),
-                                     opts.z_dim)
-                         )
-
-    # load dataset
-    train_ds = ClipDataset(data_dir=dataset_params["data_dir"],
-                           band_name=model_params["name"],
-                           clip_len=dataset_params["clip_len"])
-
-    train_loader = torch.utils.data.DataLoader(train_ds, shuffle=True,
-                                               batch_size=dataset_params["batch_size"],
-                                               drop_last=True,
-                                               num_workers=0)
-    est.train(input_loader=train_loader,
-              model_dir=m_dir,
-              n_epoch=train_params["n_epoch"],
-              lr=train_params["lr"],
-              beta=train_params["beta"],
-              n_print=train_params["n_print"]
-              )
+    # Loop through each frequency band.
+    for band in bands:
+        print(f"\nStarting training for the {band} band:")
+        # Set the model identifier and dataset band name.
+        model_params["name"] = band
+        # Create a subdirectory for this band in the model_dir.
+        m_dir = os.path.join(train_params["model_dir"], f"{band}_z{opts.z_dim}")
+        if not os.path.isdir(m_dir):
+            os.makedirs(m_dir)
+        
+        # Configure and create the model.
+        model = VAEEG(in_channels=model_params["in_channels"],
+                      z_dim=model_params["z_dim"],
+                      negative_slope=model_params["negative_slope"],
+                      decoder_last_lstm=model_params["decoder_last_lstm"])
+        
+        # Initialize the model (and load checkpoint if provided).
+        est = Estimator(model, train_params["n_gpus"], train_params["ckpt_file"])
+        
+        # The dataset loader expects a file named "<band>.npy" in dataset_params["data_dir"].
+        train_ds = ClipDataset(data_dir=dataset_params["data_dir"],
+                               band_name=model_params["name"],
+                               clip_len=dataset_params["clip_len"])
+        
+        train_loader = torch.utils.data.DataLoader(
+            train_ds,
+            shuffle=True,
+            batch_size=dataset_params["batch_size"],
+            drop_last=True,
+            num_workers=0
+        )
+        
+        # Run the training loop for this frequency band.
+        est.train(
+            input_loader=train_loader,
+            model_dir=m_dir,
+            n_epoch=train_params["n_epoch"],
+            lr=train_params["lr"],
+            beta=train_params["beta"],
+            n_print=train_params["n_print"]
+        )

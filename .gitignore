@@ -6,6 +6,9 @@ vaeeg/
 /raw_data/
 # Ignore processed data 
 /new_data/
+/new_data_downsampled/
 # Ignore temporary files or caches 
 *.pyc
 __pycache__/
+# Ignore temporary scripts
+temp_scripts/*.py

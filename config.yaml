@@ -2,7 +2,7 @@ Train:
   model_dir: "./models"           # Directory where checkpoints and logs will be saved.
   n_gpus: 0                       # Number of GPUs to use (set to 1 for single-GPU/MPS, or 0 for CPU).
   ckpt_file: ""                   # Path to a checkpoint file if resuming training; leave empty for training from scratch.
-  n_epoch: 50                     # Total number of training epochs.
+  n_epoch: 5                      # Total number of training epochs.
   lr: 0.001                       # Learning rate for the optimizer.
   beta: 1.0                       # Weight factor for the KL divergence loss.
   n_print: 100                    # Frequency (in steps) to log training information.
@@ -10,10 +10,10 @@ Train:
 Model:
   in_channels: 1                  # Number of input channels (single-channel EEG).
   negative_slope: 0.2             # Negative slope for LeakyReLU activations.
-  decoder_last_lstm: true         # Whether to use an LSTM in the decoder tail.
+  decoder_last_lstm: false         # Whether to use an LSTM in the decoder tail.
   name: "theta"                   # Name identifier for the model (used to name output files, etc.).
 
 DataSet:
-  data_dir: "./new_data/train"  # Directory where the preprocessed EEG clip .npy files are stored.
-  clip_len: 256                       # Length of each clip in samples (1 second at 256 Hz).
-  batch_size: 32                      # Batch size for training.
+  data_dir: "./new_data_downsampled/train/channel_1"  # Directory where the preprocessed EEG clip .npy files are stored.
+  clip_len: 256                                       # Length of each clip in samples (1 second at 256 Hz).
+  batch_size: 8                                       # Batch size for training.
