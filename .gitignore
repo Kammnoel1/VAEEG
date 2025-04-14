@@ -11,4 +11,4 @@ vaeeg/
 *.pyc
 __pycache__/
 # Ignore temporary scripts
-/temp_scripts/
+src/temp_scripts/
