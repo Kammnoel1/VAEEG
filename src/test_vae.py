@@ -6,28 +6,18 @@ from src.model.opts.ckpt import load_model
 from src.model.net.modelA import VAEEG
 from src.model.opts.dataset import ClipDataset
 from torch.utils.data import DataLoader
-
-# Locate the most recent checkpoint file.
-def find_latest_checkpoint(ckpt_dir, pattern="ckpt_epoch_*.ckpt"):
-    ckpt_files = glob.glob(os.path.join(ckpt_dir, pattern))
-    if not ckpt_files:
-        raise FileNotFoundError("No checkpoint files found in " + ckpt_dir)
-    # Extract epoch numbers and select the maximum
-    latest_ckpt = max(ckpt_files, key=lambda x: int(os.path.basename(x).split('_')[-1].split('.')[0]))
-    return latest_ckpt
+import torch.nn.functional as F
+from scipy.stats import pearsonr
 
 # Set the directory where your checkpoints are saved.
-checkpoint_dir = "./models/config_z50"
-
-latest_ckpt = find_latest_checkpoint(checkpoint_dir)
-print("Loading checkpoint:", latest_ckpt)
+latest_ckpt = "models/theta_z50/ckpt_epoch_5.ckpt"
 
 # Instantiate the model with the same parameters as during training.
 model_params = {
     "in_channels": 1,
     "z_dim": 50,  
     "negative_slope": 0.2,
-    "decoder_last_lstm": True
+    "decoder_last_lstm": False
 }
 model = VAEEG(**model_params)
 
@@ -38,24 +28,39 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model.to(device)
 
 # Set up your test dataset.
-test_data_dir = "./new_data/test"  
+test_data_dir = "./new_data_downsampled/test/channel_1"  
 band_name = "theta" 
-clip_len = 2048  
-batch_size = 32
+clip_len = 256
+batch_size = 8
 
 test_dataset = ClipDataset(data_dir=test_data_dir, band_name=band_name, clip_len=clip_len)
 test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, drop_last=False)
 
+def compute_pearson(x_np, xhat_np):
+    # Compute Pearson correlation for each sample and average.
+    correlations = []
+    for x, xhat in zip(x_np, xhat_np):
+        # Flatten each sample (they are 1D arrays) 
+        r, _ = pearsonr(x.flatten(), xhat.flatten())
+        correlations.append(r)
+    return np.mean(correlations)
+
 # Evaluate the model on test data.
-recon_losses = []
+mse_losses, pearson_corrs = [], []
 with torch.no_grad():
     for batch in test_loader:
-        # Move the input to the proper device
+        batch = batch.float()
         batch = batch.to(device)
         mu, log_var, xbar = model(batch)
-        # Compute reconstruction loss; you can use your recon_loss function.
-        loss = torch.nn.functional.mse_loss(xbar, batch, reduction="mean")
-        recon_losses.append(loss.item())
+        mse_loss = F.mse_loss(xbar, batch, reduction="mean")
+        # Gather data on the CPU for Pearson computation.
+        batch_np = batch.cpu().detach().numpy()
+        xbar_np = xbar.cpu().detach().numpy()
+        pearson_val = compute_pearson(batch_np, xbar_np)
+        mse_losses.append(mse_loss.item())
+        pearson_corrs.append(pearson_val)
 
-avg_loss = np.mean(recon_losses)
-print(f"Average Reconstruction Loss on Test Data: {avg_loss}")
+avg_mse = np.mean(mse_losses)
+avg_pearson = np.mean(pearson_corrs)
+print(f"Average Reconstruction MSE on Test Data: {avg_mse}")
+print(f"Average Pearson Correlation on Test Data: {avg_pearson}")
