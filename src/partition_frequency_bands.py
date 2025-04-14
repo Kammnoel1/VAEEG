@@ -1,6 +1,6 @@
 import os
-import argparse
 import numpy as np
+import argparse
 
 def fft_bandpass(segment, sfreq, f_low, f_high):
     """
@@ -16,14 +16,10 @@ def fft_bandpass(segment, sfreq, f_low, f_high):
         filtered: 1D NumPy array of the filtered signal.
     """
     n = segment.shape[0]
-    # Compute the FFT of the segment (using real FFT)
     fft_vals = np.fft.rfft(segment)
     freqs = np.fft.rfftfreq(n, d=1/sfreq)
-    # Create mask for frequencies within the band
     mask = (freqs >= f_low) & (freqs <= f_high)
-    # Zero out frequencies outside the desired band
     fft_filtered = fft_vals * mask
-    # Inverse FFT to get time domain signal
     filtered = np.fft.irfft(fft_filtered, n=n)
     return filtered
 
@@ -49,9 +45,8 @@ def partition_channel(data_channel, sfreq):
     }
     num_segments, seg_length = data_channel.shape
     out = {}
-    # "whole" is just the original signal
+    # 'whole' is the unfiltered signal.
     out["whole"] = data_channel.copy()
-    # For each band, apply FFT-based filtering to each segment.
     for band_name, (f_low, f_high) in bands.items():
         filtered_segments = []
         for seg in data_channel:
@@ -66,35 +61,35 @@ def save_partitioned_data(input_file, output_dir, sfreq):
     and save the results in separate folders for each channel.
     
     Args:
-        input_file: Path to the input NumPy file (shape: (num_segments, num_channels, seg_length))
+        input_file: Path to the input NumPy file 
+                    (expected shape: (num_segments, num_channels, seg_length)).
         output_dir: Directory where the channel folders will be created.
         sfreq: Sampling frequency in Hz.
+    
+    Returns:
+        None. Files are saved to disk.
     """
-    # Load the merged data; expected shape: (num_segments, num_channels, seg_length)
     data = np.load(input_file)
     num_segments, num_channels, seg_length = data.shape
     print(f"Loaded data with shape: {data.shape}")
     
-    # For each channel, partition into frequency bands and save into its folder.
+    # Iterate over each channel.
     for ch in range(num_channels):
-        # Extract data for channel ch: shape (num_segments, seg_length)
-        channel_data = data[:, ch, :]
-        # Partition into bands
+        channel_data = data[:, ch, :]  # Shape: (num_segments, seg_length)
         partitioned = partition_channel(channel_data, sfreq)
-        # Create folder for the channel
         ch_folder = os.path.join(output_dir, f"channel_{ch+1}")
         os.makedirs(ch_folder, exist_ok=True)
-        # Save each band as a separate file
         for band_name, band_data in partitioned.items():
             out_path = os.path.join(ch_folder, f"{band_name}.npy")
             np.save(out_path, band_data)
             print(f"Saved channel {ch+1}, band '{band_name}' with shape {band_data.shape} to {out_path}")
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Partition EEG data into frequency bands using FFT.")
     parser.add_argument("--input_file", type=str, required=True,
                         help="Path to input NumPy file (merged data).")
-    parser.add_argument("--sfreq", type=float, default=2048.0,
+    parser.add_argument("--sfreq", type=int,
                         help="Sampling frequency (Hz).")
     parser.add_argument("--output_dir", type=str, required=True,
                         help="Directory where partitioned data will be saved (one folder per channel).")

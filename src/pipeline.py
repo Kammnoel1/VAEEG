@@ -1,5 +1,7 @@
 import argparse 
 from src.gen_data import generate_data
+from src.partition_frequency_bands import save_partitioned_data
+from src.split_dataset import process_all_channels
 
 
 def main(): 
