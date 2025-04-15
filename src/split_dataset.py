@@ -38,8 +38,6 @@ def split_channel_data(channel_folder, train_ratio=0.9):
         test_data = data[indices[n_train:]]
         
         split_dict[band] = {"train": train_data, "test": test_data}
-        print(f"Channel '{os.path.basename(channel_folder)}', band '{band}': Total: {num_segments}, "
-              f"Train: {train_data.shape[0]}, Test: {test_data.shape[0]}")
         
     return split_dict
 
@@ -63,7 +61,6 @@ def save_split_data(channel_name, split_dict, base_out_dir):
         test_path = os.path.join(test_channel_dir, f"{band}.npy")
         np.save(train_path, data_dict["train"])
         np.save(test_path, data_dict["test"])
-        print(f"Saved {band}: train -> {train_path}, test -> {test_path}")
 
 def process_all_channels(input_dir, output_dir, train_ratio=0.9):
     """

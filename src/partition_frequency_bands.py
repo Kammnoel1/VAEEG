@@ -82,10 +82,8 @@ def save_partitioned_data(input_file, output_dir, sfreq):
         for band_name, band_data in partitioned.items():
             out_path = os.path.join(ch_folder, f"{band_name}.npy")
             np.save(out_path, band_data)
-            print(f"Saved channel {ch+1}, band '{band_name}' with shape {band_data.shape} to {out_path}")
 
-
-if __name__ == "__main__":
+def main(): 
     parser = argparse.ArgumentParser(description="Partition EEG data into frequency bands using FFT.")
     parser.add_argument("--input_file", type=str, required=True,
                         help="Path to input NumPy file (merged data).")
@@ -96,3 +94,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     save_partitioned_data(args.input_file, args.output_dir, args.sfreq)
+    
+
+if __name__ == "__main__":
+    main()

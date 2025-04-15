@@ -4,6 +4,7 @@ import gc
 import time
 import mne
 import numpy as np
+import argparse
 
 class DataGen(object):
     """
@@ -100,9 +101,7 @@ def generate_data(in_file, sfreq, out_dir, out_prefix):
     gc.collect()
     return segments
 
-# Standalone execution remains available.
-if __name__ == "__main__":
-    import argparse
+def main(): 
     parser = argparse.ArgumentParser(
         description="Process a .set file: read raw EEG, segment it into 1-second intervals, and store as a NumPy array.")
     parser.add_argument("--in_file", type=str, required=True,
@@ -116,3 +115,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     generate_data(args.in_file, args.sfreq, args.out_dir, args.out_prefix)
+
+
+# Standalone execution remains available.
+if __name__ == "__main__":
+    main()
