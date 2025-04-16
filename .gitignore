@@ -10,5 +10,6 @@ vaeeg/
 # Ignore temporary files or caches 
 *.pyc
 __pycache__/
+/logs/
 # Ignore temporary scripts
 src/temp_scripts/

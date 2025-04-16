@@ -68,8 +68,15 @@ class Estimator(object):
         current_epoch = self.aux.get("current_epoch", 0)
         current_step = self.aux.get("current_step", 0)
 
+        if isinstance(self.model, torch.nn.DataParallel):
+            encoder_params = self.model.module.encoder.parameters()
+            decoder_params = self.model.module.decoder.parameters()
+        else:
+            encoder_params = self.model.encoder.parameters()
+            decoder_params = self.model.decoder.parameters()
+
         optimizer = optim.RMSprop(
-            itertools.chain(self.model.encoder.parameters(), self.model.decoder.parameters()),
+            itertools.chain(encoder_params, decoder_params),
             lr=lr
         )
 

@@ -28,7 +28,7 @@ Train:
   # Directory where checkpoints and logs will be saved (subdirectories will be created per frequency band)
   model_dir: "./models"
   # Number of GPUs to use (0 for CPU-only)
-  n_gpus: 0
+  n_gpus: 4
   # Path to checkpoint file if resuming training (leave empty to train from scratch)
   ckpt_file: ""
   # Number of training epochs
