@@ -4,24 +4,10 @@ RawData:
   in_file: "./raw_data/sep_uwgr_prepro.set"
   # Sampling frequency of your raw data (Hz)
   sfreq: 256
-  # Output directory where the segmented data file will be saved
-  out_dir: "./new_data/segmented"
-  # Prefix for the segmented data file; the file will be saved as out_dir/out_prefix.npy
-  out_prefix: "sep_uwgr_prepro"
-
-# Partition: Settings for partitioning the segmented data into frequency bands per channel.
-Partition:
-  # Output directory where each channel's frequency-partitioned data will be stored.
-  output_dir: "./new_data/single_channel_segments"
-
-# Split: Settings for splitting the partitioned data into training and testing sets.
-Split:
-  # Input directory containing the channel folders from the partition step.
-  input_dir: "./new_data/single_channel_segments"
-  # Base directory where the train and test subfolders will be created.
-  output_dir: "./new_data"
-  # Ratio for splitting into training and test (e.g., 0.9 for 90% training and 10% testing)
-  train_ratio: 0.9
+  # Output directory where data, train and test will be saved
+  out_dir: "./new_data/"
+  # Size of test set 
+  test_size: 0.2
 
 # Train: Training hyperparameters.
 Train:
@@ -39,26 +25,22 @@ Train:
   beta: 1.0
   # Frequency (in steps) at which to log training info
   n_print: 100
+  # Batch size for training
+  batch_size: 64
 
 # Model: Model architecture parameters.
 Model:
   # Number of input channels (for single-channel EEG)
   in_channels: 1
+  # Channel to be used for training
+  channel: 0
+  # Frequency band for training
+  band: "alpha"
   # Negative slope for LeakyReLU activations
   negative_slope: 0.2
   # Whether the decoder uses a final LSTM layer (set to false if not desired)
   decoder_last_lstm: false
-  # Name/identifier for the model. This value will be overwritten for each frequency band training.
-  name: "alpha"
-  # Latent space dimension (this value will be updated via a command-line argument if needed)
-  z_dim: 50
 
-# DataSet: Parameters for loading training data.
-DataSet:
-  # Directory where the training .npy files are stored (e.g., the channel folder from your split step)
-  # This should match the frequency-specific file name as expected by your dataset loader (e.g., theta.npy)
-  data_dir: "./new_data/train/channel_1"
-  # Length of each clip in samples (if 1 second at 2048 Hz, then 2048)
-  clip_len: 256
-  # Batch size for training
-  batch_size: 8
+  
+  
+  

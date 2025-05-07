@@ -62,7 +62,6 @@ class Estimator(object):
     def train(self, input_loader, model_dir, n_epoch, lr, beta, n_print):
         summary_dir = os.path.join(model_dir, "save")
         os.makedirs(summary_dir, exist_ok=True)
-        loss_file = os.path.join(model_dir, "train_loss.csv")
         writer = SummaryWriter(summary_dir)
 
         current_epoch = self.aux.get("current_epoch", 0)
@@ -98,18 +97,15 @@ class Estimator(object):
                 optimizer.step()
 
                 if current_step % n_print == 0:
-                    writer.add_scalar('loss', loss, current_step)
-                    writer.add_scalar('kld_loss', kld, current_step)
-                    writer.add_scalar('rec_loss', rec, current_step)
-
+                    # Saving to TensorBoard without printing to console
                     error = (input_x - xbar).abs().mean()
-                    writer.add_scalar('mae error', error, current_step)
-
                     pr = self.pearson_index(input_x, xbar)
+
+                    writer.add_scalar('mae error', error, current_step)
                     writer.add_scalar('pearsonr', pr.mean(), current_step)
 
+                    # Saving to CSV (without printing loss to console)
                     cycle_time = (time.time() - start_time) / n_print
-
                     values = (
                         current_epoch, current_step, cycle_time,
                         loss.cpu().detach().numpy(),
@@ -120,27 +116,20 @@ class Estimator(object):
                     )
                     names = ["current_epoch", "current_step", "cycle_time",
                              "loss", "kld_loss", "rec_loss", "error", "pr"]
-                    print("[Epoch %d, Step %d]: (%.3f s / cycle])\n"
-                          "  loss: %.3f; kld_loss: %.3f; rec: %.3f;\n"
-                          "  mae error: %.3f; pr: %.3f.\n" % values)
-
-                    img = batch_imgs(
-                        input_x.cpu().detach().numpy()[:, 0, :],
-                        xbar.cpu().detach().numpy()[:, 0, :],
-                        2048, 4, 2, fig_size=(8, 5)
-                    )
-                    writer.add_image("signal", img, current_step, dataformats="HWC")
-                    start_time = time.time()
 
                     n_float = len(values) - 2
                     fmt_str = "%d,%d" + ",%.3f" * n_float
-                    save_loss_per_line(loss_file, fmt_str % values, ",".join(names))
+                    save_loss_per_line(os.path.join(model_dir, "train_loss.csv"), fmt_str % values, ",".join(names))
+
+                    start_time = time.time()
+
             out_ckpt_file = os.path.join(model_dir, f"ckpt_epoch_{current_epoch}.ckpt")
             save_model(self.model, out_file=out_ckpt_file, auxiliary={"current_step": current_step, "current_epoch": current_epoch})
         writer.close()
 
 
-def train_model_for_band(band, yaml_config, z_dim):
+
+def train_model_for_band(band, yaml_config, z_dim, paths):
     """
     Train the model for a single frequency band.
     
@@ -148,10 +137,11 @@ def train_model_for_band(band, yaml_config, z_dim):
         band: str, frequency band name (e.g., "theta").
         yaml_config: dict, the loaded YAML configuration.
         z_dim: int, dimensionality of the latent space.
+        paths: dict, paths to the data files.
+        channel: str, specified channel.
     """
     train_params = yaml_config["Train"]
     model_params = yaml_config["Model"]
-    dataset_params = yaml_config["DataSet"]
     
     # Overwrite the band for this training run.
     model_params["name"] = band
@@ -173,17 +163,16 @@ def train_model_for_band(band, yaml_config, z_dim):
     # Initialize (or load from checkpoint if provided).
     est = Estimator(model, train_params["n_gpus"], train_params["ckpt_file"])
     
-    # The dataset loader expects a file named "<band>.npy" in dataset_params["data_dir"].
-    train_ds = ClipDataset(
-        data_dir=dataset_params["data_dir"],
-        band_name=band,
-        clip_len=dataset_params["clip_len"]
-    )
+    # Dataset for this band.
+    data_file = paths["train"]
+    band_idx = {"delta": 0, "theta": 1, "alpha": 2, "low_beta": 3, "high_beta": 4}[band]
+    channel = model_params["channel"]
+    train_ds = ClipDataset(data_file, band_idx, channel)
     
     train_loader = torch.utils.data.DataLoader(
         train_ds,
         shuffle=True,
-        batch_size=dataset_params["batch_size"],
+        batch_size=train_params["batch_size"],
         drop_last=True,
         num_workers=0
     )
