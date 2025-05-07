@@ -1,0 +1,571 @@
+=== Step 1: Generating segmented data ===
+Saved segmented EEG data with shape (13138, 253, 256) to ./new_data/segmented/sep_uwgr_prepro.npy
+=== Step 2: Partitioning data into frequency bands per channel ===
+Loaded data with shape: (13138, 253, 256)
+=== Step 3: Splitting data into train and test sets ===
+=== Step 4: Training models for each frequency band ===
+Training with n_epoch=30, lr=0.1, z_dim=3, negative_slope=0.01, decoder_last_lstm=True, batch_size=8
+
+Starting training for the delta band:
+Saving checkpoints and logs to: ./models/delta_z3
+Assign model to cuda device.Using 4 gpus.
+[Epoch 1, Step 100]: (0.601 s / cycle])
+  loss: 7.710; kld_loss: 6.713; rec: 0.997;
+  mae error: 0.825; pr: -0.162.
+
+[Epoch 1, Step 200]: (0.436 s / cycle])
+  loss: 6.878; kld_loss: 5.882; rec: 0.997;
+  mae error: 0.809; pr: 0.097.
+
+[Epoch 1, Step 300]: (0.440 s / cycle])
+  loss: 6.045; kld_loss: 5.049; rec: 0.996;
+  mae error: 0.836; pr: 0.146.
+
+[Epoch 1, Step 400]: (0.441 s / cycle])
+  loss: 5.947; kld_loss: 4.950; rec: 0.997;
+  mae error: 0.846; pr: -0.086.
+
+[Epoch 1, Step 500]: (0.434 s / cycle])
+  loss: 5.480; kld_loss: 4.483; rec: 0.997;
+  mae error: 0.807; pr: -0.019.
+
+[Epoch 1, Step 600]: (0.437 s / cycle])
+  loss: 6.186; kld_loss: 5.190; rec: 0.997;
+  mae error: 0.840; pr: 0.002.
+
+[Epoch 1, Step 700]: (0.435 s / cycle])
+  loss: 5.341; kld_loss: 4.345; rec: 0.996;
+  mae error: 0.800; pr: -0.001.
+
+[Epoch 1, Step 800]: (0.437 s / cycle])
+  loss: 6.238; kld_loss: 5.242; rec: 0.996;
+  mae error: 0.795; pr: -0.013.
+
+[Epoch 1, Step 900]: (0.438 s / cycle])
+  loss: 5.470; kld_loss: 4.474; rec: 0.996;
+  mae error: 0.847; pr: -0.005.
+
+[Epoch 1, Step 1000]: (0.436 s / cycle])
+  loss: 5.618; kld_loss: 4.621; rec: 0.997;
+  mae error: 0.851; pr: 0.021.
+
+[Epoch 1, Step 1100]: (0.441 s / cycle])
+  loss: 5.034; kld_loss: 4.038; rec: 0.996;
+  mae error: 0.803; pr: -0.016.
+
+[Epoch 1, Step 1200]: (0.441 s / cycle])
+  loss: 5.950; kld_loss: 4.954; rec: 0.996;
+  mae error: 0.814; pr: 0.021.
+
+[Epoch 1, Step 1300]: (0.438 s / cycle])
+  loss: 4.797; kld_loss: 3.800; rec: 0.997;
+  mae error: 0.845; pr: -0.007.
+
+[Epoch 1, Step 1400]: (0.442 s / cycle])
+  loss: 5.318; kld_loss: 4.322; rec: 0.996;
+  mae error: 0.800; pr: -0.014.
+
+[Epoch 2, Step 1500]: (0.441 s / cycle])
+  loss: 6.108; kld_loss: 5.111; rec: 0.997;
+  mae error: 0.852; pr: 0.002.
+
+[Epoch 2, Step 1600]: (0.437 s / cycle])
+  loss: 5.051; kld_loss: 4.054; rec: 0.997;
+  mae error: 0.791; pr: -0.008.
+
+[Epoch 2, Step 1700]: (0.442 s / cycle])
+  loss: 4.787; kld_loss: 3.790; rec: 0.997;
+  mae error: 0.796; pr: 0.016.
+
+[Epoch 2, Step 1800]: (0.437 s / cycle])
+  loss: 4.232; kld_loss: 3.236; rec: 0.996;
+  mae error: 0.839; pr: -0.010.
+
+[Epoch 2, Step 1900]: (0.441 s / cycle])
+  loss: 3.834; kld_loss: 2.837; rec: 0.997;
+  mae error: 0.821; pr: -0.027.
+
+[Epoch 2, Step 2000]: (0.441 s / cycle])
+  loss: 3.667; kld_loss: 2.669; rec: 0.998;
+  mae error: 0.827; pr: 0.012.
+
+[Epoch 2, Step 2100]: (0.437 s / cycle])
+  loss: 3.166; kld_loss: 2.170; rec: 0.996;
+  mae error: 0.815; pr: 0.030.
+
+[Epoch 2, Step 2200]: (0.442 s / cycle])
+  loss: 3.214; kld_loss: 2.217; rec: 0.997;
+  mae error: 0.827; pr: 0.004.
+
+[Epoch 2, Step 2300]: (0.441 s / cycle])
+  loss: 3.413; kld_loss: 2.416; rec: 0.997;
+  mae error: 0.820; pr: -0.066.
+
+[Epoch 2, Step 2400]: (0.438 s / cycle])
+  loss: 3.526; kld_loss: 2.529; rec: 0.997;
+  mae error: 0.830; pr: -0.022.
+
+[Epoch 2, Step 2500]: (0.442 s / cycle])
+  loss: 2.879; kld_loss: 1.882; rec: 0.997;
+  mae error: 0.819; pr: 0.016.
+
+[Epoch 2, Step 2600]: (0.438 s / cycle])
+  loss: 2.203; kld_loss: 1.206; rec: 0.997;
+  mae error: 0.829; pr: -0.044.
+
+[Epoch 2, Step 2700]: (0.441 s / cycle])
+  loss: 1.945; kld_loss: 0.948; rec: 0.997;
+  mae error: 0.800; pr: 0.012.
+
+[Epoch 2, Step 2800]: (0.442 s / cycle])
+  loss: 1.734; kld_loss: 0.738; rec: 0.996;
+  mae error: 0.820; pr: 0.013.
+
+[Epoch 2, Step 2900]: (0.437 s / cycle])
+  loss: 1.721; kld_loss: 0.725; rec: 0.996;
+  mae error: 0.842; pr: -0.017.
+
+[Epoch 3, Step 3000]: (0.442 s / cycle])
+  loss: 1.457; kld_loss: 0.460; rec: 0.997;
+  mae error: 0.838; pr: -0.031.
+
+[Epoch 3, Step 3100]: (0.442 s / cycle])
+  loss: 1.387; kld_loss: 0.390; rec: 0.997;
+  mae error: 0.822; pr: -0.036.
+
+[Epoch 3, Step 3200]: (0.438 s / cycle])
+  loss: 1.160; kld_loss: 0.163; rec: 0.997;
+  mae error: 0.820; pr: -0.001.
+
+[Epoch 3, Step 3300]: (0.442 s / cycle])
+  loss: 1.241; kld_loss: 0.244; rec: 0.997;
+  mae error: 0.815; pr: 0.000.
+
+[Epoch 3, Step 3400]: (0.440 s / cycle])
+  loss: 1.027; kld_loss: 0.031; rec: 0.997;
+  mae error: 0.804; pr: -0.006.
+
+[Epoch 3, Step 3500]: (0.440 s / cycle])
+  loss: 1.003; kld_loss: 0.006; rec: 0.997;
+  mae error: 0.812; pr: -0.022.
+
+[Epoch 3, Step 3600]: (0.442 s / cycle])
+  loss: 1.008; kld_loss: 0.011; rec: 0.997;
+  mae error: 0.835; pr: -0.012.
+
+[Epoch 3, Step 3700]: (0.438 s / cycle])
+  loss: 1.013; kld_loss: 0.016; rec: 0.997;
+  mae error: 0.848; pr: 0.024.
+
+[Epoch 3, Step 3800]: (0.442 s / cycle])
+  loss: 1.010; kld_loss: 0.013; rec: 0.997;
+  mae error: 0.830; pr: -0.034.
+
+[Epoch 3, Step 3900]: (0.442 s / cycle])
+  loss: 1.000; kld_loss: 0.004; rec: 0.996;
+  mae error: 0.837; pr: 0.008.
+
+[Epoch 3, Step 4000]: (0.438 s / cycle])
+  loss: 0.997; kld_loss: 0.000; rec: 0.997;
+  mae error: 0.849; pr: -0.010.
+
+[Epoch 3, Step 4100]: (0.442 s / cycle])
+  loss: 0.998; kld_loss: 0.000; rec: 0.997;
+  mae error: 0.827; pr: -0.008.
+
+[Epoch 3, Step 4200]: (0.442 s / cycle])
+  loss: 1.000; kld_loss: 0.003; rec: 0.997;
+  mae error: 0.852; pr: 0.007.
+
+[Epoch 3, Step 4300]: (0.439 s / cycle])
+  loss: 0.999; kld_loss: 0.003; rec: 0.997;
+  mae error: 0.822; pr: 0.032.
+
+[Epoch 3, Step 4400]: (0.442 s / cycle])
+  loss: 1.002; kld_loss: 0.004; rec: 0.997;
+  mae error: 0.821; pr: 0.026.
+
+[Epoch 4, Step 4500]: (0.439 s / cycle])
+  loss: 0.998; kld_loss: 0.001; rec: 0.998;
+  mae error: 0.825; pr: 0.007.
+
+[Epoch 4, Step 4600]: (0.441 s / cycle])
+  loss: 1.000; kld_loss: 0.003; rec: 0.997;
+  mae error: 0.835; pr: -0.035.
+
+[Epoch 4, Step 4700]: (0.441 s / cycle])
+  loss: 1.002; kld_loss: 0.005; rec: 0.997;
+  mae error: 0.821; pr: 0.008.
+
+[Epoch 4, Step 4800]: (0.438 s / cycle])
+  loss: 0.998; kld_loss: 0.001; rec: 0.997;
+  mae error: 0.848; pr: -0.002.
+
+[Epoch 4, Step 4900]: (0.442 s / cycle])
+  loss: 1.000; kld_loss: 0.003; rec: 0.997;
+  mae error: 0.830; pr: -0.023.
+
+[Epoch 4, Step 5000]: (0.442 s / cycle])
+  loss: 1.087; kld_loss: 0.090; rec: 0.997;
+  mae error: 0.841; pr: 0.046.
+
+[Epoch 4, Step 5100]: (0.438 s / cycle])
+  loss: 1.012; kld_loss: 0.015; rec: 0.997;
+  mae error: 0.830; pr: 0.013.
+
+[Epoch 4, Step 5200]: (0.442 s / cycle])
+  loss: 0.998; kld_loss: 0.001; rec: 0.997;
+  mae error: 0.835; pr: -0.004.
+
+[Epoch 4, Step 5300]: (0.438 s / cycle])
+  loss: 0.997; kld_loss: 0.000; rec: 0.997;
+  mae error: 0.838; pr: 0.025.
+
+[Epoch 4, Step 5400]: (0.441 s / cycle])
+  loss: 0.997; kld_loss: 0.000; rec: 0.997;
+  mae error: 0.817; pr: -0.025.
+
+[Epoch 4, Step 5500]: (0.441 s / cycle])
+  loss: 0.997; kld_loss: 0.001; rec: 0.996;
+  mae error: 0.850; pr: 0.032.
+
+[Epoch 4, Step 5600]: (0.437 s / cycle])
+  loss: 0.999; kld_loss: 0.001; rec: 0.998;
+  mae error: 0.837; pr: -0.018.
+
+[Epoch 4, Step 5700]: (0.442 s / cycle])
+  loss: 0.999; kld_loss: 0.002; rec: 0.997;
+  mae error: 0.838; pr: 0.017.
+
+[Epoch 4, Step 5800]: (0.442 s / cycle])
+  loss: 1.000; kld_loss: 0.004; rec: 0.996;
+  mae error: 0.860; pr: -0.028.
+
+[Epoch 4, Step 5900]: (0.437 s / cycle])
+  loss: 1.501; kld_loss: 0.504; rec: 0.997;
+  mae error: 0.842; pr: 0.037.
+
+[Epoch 5, Step 6000]: (0.442 s / cycle])
+  loss: 1.180; kld_loss: 0.184; rec: 0.997;
+  mae error: 0.832; pr: 0.001.
+
+[Epoch 5, Step 6100]: (0.439 s / cycle])
+  loss: 1.229; kld_loss: 0.232; rec: 0.997;
+  mae error: 0.837; pr: 0.030.
+
+[Epoch 5, Step 6200]: (0.440 s / cycle])
+  loss: 1.159; kld_loss: 0.162; rec: 0.997;
+  mae error: 0.827; pr: -0.015.
+
+[Epoch 5, Step 6300]: (0.443 s / cycle])
+  loss: 1.101; kld_loss: 0.103; rec: 0.998;
+  mae error: 0.826; pr: -0.016.
+
+[Epoch 5, Step 6400]: (0.437 s / cycle])
+  loss: 1.047; kld_loss: 0.049; rec: 0.997;
+  mae error: 0.829; pr: -0.034.
+
+[Epoch 5, Step 6500]: (0.442 s / cycle])
+  loss: 1.175; kld_loss: 0.178; rec: 0.997;
+  mae error: 0.827; pr: 0.027.
+
+[Epoch 5, Step 6600]: (0.443 s / cycle])
+  loss: 1.072; kld_loss: 0.075; rec: 0.997;
+  mae error: 0.836; pr: 0.026.
+
+[Epoch 5, Step 6700]: (0.438 s / cycle])
+  loss: 1.010; kld_loss: 0.014; rec: 0.997;
+  mae error: 0.795; pr: -0.009.
+
+[Epoch 5, Step 6800]: (0.442 s / cycle])
+  loss: 1.009; kld_loss: 0.013; rec: 0.996;
+  mae error: 0.804; pr: 0.020.
+
+[Epoch 5, Step 6900]: (0.441 s / cycle])
+  loss: 1.001; kld_loss: 0.004; rec: 0.997;
+  mae error: 0.804; pr: -0.011.
+
+[Epoch 5, Step 7000]: (0.440 s / cycle])
+  loss: 1.000; kld_loss: 0.004; rec: 0.996;
+  mae error: 0.832; pr: 0.041.
+
+[Epoch 5, Step 7100]: (0.442 s / cycle])
+  loss: 1.000; kld_loss: 0.003; rec: 0.997;
+  mae error: 0.839; pr: -0.011.
+
+[Epoch 5, Step 7200]: (0.437 s / cycle])
+  loss: 1.001; kld_loss: 0.004; rec: 0.997;
+  mae error: 0.806; pr: -0.012.
+
+[Epoch 5, Step 7300]: (0.443 s / cycle])
+  loss: 1.003; kld_loss: 0.006; rec: 0.997;
+  mae error: 0.854; pr: -0.024.
+
+[Epoch 6, Step 7400]: (0.441 s / cycle])
+  loss: 2.932; kld_loss: 1.936; rec: 0.997;
+  mae error: 0.818; pr: -0.009.
+
+[Epoch 6, Step 7500]: (0.439 s / cycle])
+  loss: 2.466; kld_loss: 1.470; rec: 0.996;
+  mae error: 0.842; pr: -0.027.
+
+[Epoch 6, Step 7600]: (0.443 s / cycle])
+  loss: 2.108; kld_loss: 1.111; rec: 0.998;
+  mae error: 0.816; pr: 0.015.
+
+[Epoch 6, Step 7700]: (0.443 s / cycle])
+  loss: 1.973; kld_loss: 0.976; rec: 0.996;
+  mae error: 0.832; pr: 0.011.
+
+[Epoch 6, Step 7800]: (0.439 s / cycle])
+  loss: 1.551; kld_loss: 0.555; rec: 0.996;
+  mae error: 0.821; pr: 0.019.
+
+[Epoch 6, Step 7900]: (0.441 s / cycle])
+  loss: 1.292; kld_loss: 0.295; rec: 0.997;
+  mae error: 0.849; pr: 0.023.
+
+[Epoch 6, Step 8000]: (0.439 s / cycle])
+  loss: 1.273; kld_loss: 0.276; rec: 0.997;
+  mae error: 0.807; pr: 0.018.
+
+[Epoch 6, Step 8100]: (0.443 s / cycle])
+  loss: 1.035; kld_loss: 0.038; rec: 0.997;
+  mae error: 0.831; pr: 0.021.
+
+[Epoch 6, Step 8200]: (0.443 s / cycle])
+  loss: 1.002; kld_loss: 0.005; rec: 0.997;
+  mae error: 0.834; pr: 0.015.
+
+[Epoch 6, Step 8300]: (0.439 s / cycle])
+  loss: 1.014; kld_loss: 0.017; rec: 0.997;
+  mae error: 0.823; pr: 0.016.
+
+[Epoch 6, Step 8400]: (0.441 s / cycle])
+  loss: 1.008; kld_loss: 0.010; rec: 0.998;
+  mae error: 0.811; pr: 0.026.
+
+[Epoch 6, Step 8500]: (0.442 s / cycle])
+  loss: 1.003; kld_loss: 0.006; rec: 0.997;
+  mae error: 0.833; pr: 0.011.
+
+[Epoch 6, Step 8600]: (0.438 s / cycle])
+  loss: 1.002; kld_loss: 0.006; rec: 0.996;
+  mae error: 0.832; pr: -0.046.
+
+[Epoch 6, Step 8700]: (0.443 s / cycle])
+  loss: 1.000; kld_loss: 0.004; rec: 0.996;
+  mae error: 0.793; pr: 0.007.
+
+[Epoch 6, Step 8800]: (0.439 s / cycle])
+  loss: 1.001; kld_loss: 0.004; rec: 0.997;
+  mae error: 0.827; pr: 0.022.
+
+[Epoch 7, Step 8900]: (0.441 s / cycle])
+  loss: 0.998; kld_loss: 0.000; rec: 0.997;
+  mae error: 0.830; pr: -0.015.
+
+[Epoch 7, Step 9000]: (0.442 s / cycle])
+  loss: 0.998; kld_loss: 0.002; rec: 0.996;
+  mae error: 0.828; pr: 0.044.
+
+[Epoch 7, Step 9100]: (0.439 s / cycle])
+  loss: 0.998; kld_loss: 0.001; rec: 0.997;
+  mae error: 0.789; pr: -0.005.
+
+[Epoch 7, Step 9200]: (0.442 s / cycle])
+  loss: 0.998; kld_loss: 0.001; rec: 0.997;
+  mae error: 0.838; pr: 0.011.
+
+[Epoch 7, Step 9300]: (0.442 s / cycle])
+  loss: 6.132; kld_loss: 5.135; rec: 0.996;
+  mae error: 0.821; pr: 0.005.
+
+[Epoch 7, Step 9400]: (0.439 s / cycle])
+  loss: 5.490; kld_loss: 4.493; rec: 0.997;
+  mae error: 0.812; pr: 0.020.
+
+[Epoch 7, Step 9500]: (0.442 s / cycle])
+  loss: 5.917; kld_loss: 4.920; rec: 0.997;
+  mae error: 0.838; pr: 0.054.
+
+[Epoch 7, Step 9600]: (0.440 s / cycle])
+  loss: 4.332; kld_loss: 3.335; rec: 0.997;
+  mae error: 0.809; pr: -0.015.
+
+[Epoch 7, Step 9700]: (0.439 s / cycle])
+  loss: 4.083; kld_loss: 3.087; rec: 0.996;
+  mae error: 0.839; pr: -0.008.
+
+[Epoch 7, Step 9800]: (0.441 s / cycle])
+  loss: 3.801; kld_loss: 2.805; rec: 0.997;
+  mae error: 0.845; pr: -0.014.
+
+[Epoch 7, Step 9900]: (0.438 s / cycle])
+  loss: 2.609; kld_loss: 1.611; rec: 0.998;
+  mae error: 0.830; pr: 0.006.
+
+[Epoch 7, Step 10000]: (0.442 s / cycle])
+  loss: 1.886; kld_loss: 0.888; rec: 0.998;
+  mae error: 0.847; pr: -0.021.
+
+[Epoch 7, Step 10100]: (0.442 s / cycle])
+  loss: 1.289; kld_loss: 0.292; rec: 0.997;
+  mae error: 0.814; pr: 0.018.
+
+[Epoch 7, Step 10200]: (0.438 s / cycle])
+  loss: 1.238; kld_loss: 0.242; rec: 0.996;
+  mae error: 0.844; pr: 0.026.
+
+[Epoch 7, Step 10300]: (0.443 s / cycle])
+  loss: 1.079; kld_loss: 0.082; rec: 0.997;
+  mae error: 0.839; pr: 0.029.
+
+[Epoch 8, Step 10400]: (0.442 s / cycle])
+  loss: 1.025; kld_loss: 0.029; rec: 0.996;
+  mae error: 0.809; pr: -0.007.
+
+[Epoch 8, Step 10500]: (0.435 s / cycle])
+  loss: 1.031; kld_loss: 0.034; rec: 0.997;
+  mae error: 0.845; pr: 0.039.
+
+[Epoch 8, Step 10600]: (0.439 s / cycle])
+  loss: 1.036; kld_loss: 0.040; rec: 0.996;
+  mae error: 0.831; pr: -0.009.
+
+[Epoch 8, Step 10700]: (0.437 s / cycle])
+  loss: 1.007; kld_loss: 0.010; rec: 0.997;
+  mae error: 0.818; pr: -0.003.
+
+[Epoch 8, Step 10800]: (0.443 s / cycle])
+  loss: 1.006; kld_loss: 0.010; rec: 0.996;
+  mae error: 0.810; pr: -0.006.
+
+[Epoch 8, Step 10900]: (0.443 s / cycle])
+  loss: 1.001; kld_loss: 0.005; rec: 0.997;
+  mae error: 0.824; pr: 0.039.
+
+[Epoch 8, Step 11000]: (0.437 s / cycle])
+  loss: 1.001; kld_loss: 0.004; rec: 0.997;
+  mae error: 0.828; pr: 0.016.
+
+[Epoch 8, Step 11100]: (0.442 s / cycle])
+  loss: 0.999; kld_loss: 0.003; rec: 0.996;
+  mae error: 0.821; pr: -0.053.
+
+[Epoch 8, Step 11200]: (0.442 s / cycle])
+  loss: 1.000; kld_loss: 0.004; rec: 0.996;
+  mae error: 0.839; pr: -0.026.
+
+[Epoch 8, Step 11300]: (0.439 s / cycle])
+  loss: 1.512; kld_loss: 0.515; rec: 0.997;
+  mae error: 0.812; pr: 0.012.
+
+[Epoch 8, Step 11400]: (0.442 s / cycle])
+  loss: 1.274; kld_loss: 0.277; rec: 0.997;
+  mae error: 0.822; pr: -0.017.
+
+[Epoch 8, Step 11500]: (0.439 s / cycle])
+  loss: 0.999; kld_loss: 0.001; rec: 0.997;
+  mae error: 0.839; pr: 0.009.
+
+[Epoch 8, Step 11600]: (0.442 s / cycle])
+  loss: 1.000; kld_loss: 0.002; rec: 0.997;
+  mae error: 0.818; pr: -0.012.
+
+[Epoch 8, Step 11700]: (0.442 s / cycle])
+  loss: 0.999; kld_loss: 0.002; rec: 0.997;
+  mae error: 0.847; pr: -0.009.
+
+[Epoch 8, Step 11800]: (0.437 s / cycle])
+  loss: 1.005; kld_loss: 0.008; rec: 0.997;
+  mae error: 0.818; pr: 0.031.
+
+[Epoch 9, Step 11900]: (0.442 s / cycle])
+  loss: 1.040; kld_loss: 0.043; rec: 0.997;
+  mae error: 0.851; pr: -0.025.
+
+[Epoch 9, Step 12000]: (0.442 s / cycle])
+  loss: 1.000; kld_loss: 0.003; rec: 0.997;
+  mae error: 0.799; pr: -0.013.
+
+[Epoch 9, Step 12100]: (0.439 s / cycle])
+  loss: 1.001; kld_loss: 0.004; rec: 0.997;
+  mae error: 0.803; pr: 0.002.
+
+[Epoch 9, Step 12200]: (0.439 s / cycle])
+  loss: 0.996; kld_loss: 0.000; rec: 0.996;
+  mae error: 0.822; pr: 0.018.
+
+[Epoch 9, Step 12300]: (0.436 s / cycle])
+  loss: 1.000; kld_loss: 0.003; rec: 0.998;
+  mae error: 0.842; pr: -0.007.
+
+[Epoch 9, Step 12400]: (0.435 s / cycle])
+  loss: 0.999; kld_loss: 0.002; rec: 0.996;
+  mae error: 0.837; pr: 0.011.
+
+[Epoch 9, Step 12500]: (0.440 s / cycle])
+  loss: 0.999; kld_loss: 0.003; rec: 0.997;
+  mae error: 0.829; pr: 0.025.
+
+[Epoch 9, Step 12600]: (0.436 s / cycle])
+  loss: 1.000; kld_loss: 0.003; rec: 0.997;
+  mae error: 0.831; pr: -0.013.
+
+[Epoch 9, Step 12700]: (0.442 s / cycle])
+  loss: 0.999; kld_loss: 0.002; rec: 0.997;
+  mae error: 0.845; pr: 0.022.
+
+[Epoch 9, Step 12800]: (0.443 s / cycle])
+  loss: 1.001; kld_loss: 0.004; rec: 0.997;
+  mae error: 0.820; pr: 0.014.
+
+[Epoch 9, Step 12900]: (0.438 s / cycle])
+  loss: 1.003; kld_loss: 0.005; rec: 0.998;
+  mae error: 0.836; pr: -0.014.
+
+[Epoch 9, Step 13000]: (0.441 s / cycle])
+  loss: 1.286; kld_loss: 0.289; rec: 0.997;
+  mae error: 0.815; pr: -0.025.
+
+[Epoch 9, Step 13100]: (0.442 s / cycle])
+  loss: 1.067; kld_loss: 0.070; rec: 0.997;
+  mae error: 0.834; pr: 0.005.
+
+[Epoch 9, Step 13200]: (0.438 s / cycle])
+  loss: 1.007; kld_loss: 0.011; rec: 0.997;
+  mae error: 0.842; pr: -0.000.
+
+[Epoch 9, Step 13300]: (0.443 s / cycle])
+  loss: 0.997; kld_loss: 0.001; rec: 0.996;
+  mae error: 0.822; pr: -0.024.
+
+                                  
+================================= 
+Global information about the job: 
+================================= 
+  
+Job owner: noka(50110)
+Job name:  VAEEG_pipeline
+Node list: ravg1148
+Job start: Wed Apr 16 00:53:40 CEST 2025
+Job end:   Wed Apr 16 02:53:57 CEST 2025
+Work dir:  /raven/u/noka/VAEEG
+Command:   /raven/u/noka/VAEEG/send_to_raven.sbatch
+  
+  
+  
+==========================================================================================
+Information on jobsteps (Note: MaxRSS/AveRSS is the maximum/average over all 
+tasks of the per-task memory high-water marks; cf. "man sacct"): 
+==========================================================================================
+  
+JobID            JobName NNodes NTasks  NCPUS       MaxRSS       AveRSS    Elapsed ExitCode
+------------- ---------- ------ ------ ------ ------------ ------------ ---------- --------
+16971806      VAEEG_pipe      1           144                             02:00:17      0:0
+16971806.0        python      1      1    144    14924.44M    14924.44M   02:00:26     0:15
+  
+Maximum memory per node: 15.649410 GB (defined as MaxRSS*Ntasks/NNodes)
+CPU utilization: 2.0 %
+  
