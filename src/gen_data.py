@@ -3,6 +3,7 @@ import gc
 import os
 import random
 import time
+import glob
 
 import lighten.utils.interval as lui
 import mne
@@ -10,9 +11,9 @@ import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
 from utils.io import load_raw_
-from tqdm import tqdm
+from mne.filter import create_filter
 
-
+  
 class DataGen(object):
     _SFREQ = 256.0
 
@@ -32,23 +33,32 @@ class DataGen(object):
         self.ch_mapper = ch_mapper
         self.out_dir = out_dir
         self.out_prefix = out_prefix
+        self._filter_lens = {}
+        for band, (lf, hf) in self._BANDS.items():
+            kernel = create_filter(
+                data=None, sfreq=self._SFREQ,
+                l_freq=lf, h_freq=hf,
+                l_trans_bandwidth=self._l_trans_bandwidth,
+                h_trans_bandwidth=self._h_trans_bandwidth,
+                fir_design='firwin'
+            )
+            self._filter_lens[band] = len(kernel)
         self.data, self.ch_names = self.get_filter_data(verbose=False)
+
 
     @staticmethod
     def _check_channel_names(raw_obj, ch_mapper, verbose):
         rc_1 = ['FP1', 'FP2', 'F3', 'F4', 'C3', 'C4', 'P3', 'P4', 'O1',
                 'O2', 'F7', 'F8', 'T3', 'T4', 'T5', 'T6', 'FZ',
                 'CZ', 'PZ', 'A1', 'A2']
-        rc_2 = ['FP1', 'FP2', 'F3-0', 'F4', 'C3', 'C4', 'P3', 'P4', 'O1',
+        rc_2 = ['FP1', 'FP2', 'F3', 'F4', 'C3', 'C4', 'P3', 'P4', 'O1',
                 'O2', 'F7', 'F8', 'T3', 'T4', 'T5', 'T6', 'FZ',
-                'CZ', 'PZ', 'A1', 'A2']
+                'CZ', 'PZ']
+        
 
         # rename channel
         if ch_mapper is None:
-            mapper = {
-                        rn: rn.replace("EEG ", "").replace("-LE", "")
-                        for rn in raw_obj.ch_names
-                        }
+            mapper = {cname: cname.upper() for cname in raw_obj.ch_names}
         elif isinstance(ch_mapper, dict):
             mapper = ch_mapper
         else:
@@ -59,18 +69,28 @@ class DataGen(object):
         ch_names = set(raw_obj.ch_names)
 
         if set(rc_1).issubset(ch_names):
-            raw_obj.pick_channels(rc_1, ordered=True)
+            raw_obj.pick(picks=rc_1)
         elif set(rc_2).issubset(ch_names):
-            raw_obj.pick_channels(rc_2, ordered=True)
-            raw_obj.rename_channels(mapping={"F3-0": "F3"}, verbose=verbose)
+            raw_obj.pick(picks=rc_2)
         else:
             raise RuntimeError("Channel Error")
 
     def get_filter_data(self, verbose=None):
         raw = load_raw_(self.in_file)
-        self._check_channel_names(raw_obj=raw,
-                                  ch_mapper=self.ch_mapper,
-                                  verbose=verbose)
+        # Determine montage variant based on parent directory name
+        variant = os.path.basename(os.path.dirname(self.in_file))
+        suffix = "-LE" if variant == "02_tcp_le" else "-REF"
+        self.ch_mapper = {
+            ch: (ch
+                .removeprefix("EEG ")
+                .removesuffix(suffix)
+                .removesuffix("-0")    
+            )
+            for ch in raw.ch_names
+        }
+        self._check_channel_names(raw_obj = raw,
+                                  ch_mapper=self.ch_mapper, 
+                                  verbose=verbose) 
 
         raw.load_data(verbose=verbose)
         raw.resample(self._SFREQ, verbose=verbose)
@@ -78,15 +98,21 @@ class DataGen(object):
         raw.set_eeg_reference(ref_channels="average", verbose=verbose)
 
         data0 = raw.get_data()
+        max_len = max(self._filter_lens.values())
+        if data0.shape[1] < max_len:
+            raise RuntimeError(
+                f"Data too short ({data0.shape[1]} samples) for "
+                f"longest filter ({max_len} taps)"
+            )
         filter_results = {}
-
+         
         for key, (lf, hf) in self._BANDS.items():
+            
             filter_results[key] = mne.filter.filter_data(data0, self._SFREQ, l_freq=lf, h_freq=hf,
-                                                         l_trans_bandwidth=self._l_trans_bandwidth,
-                                                         h_trans_bandwidth=self._h_trans_bandwidth,
-                                                         verbose=verbose).astype(np.float32)
+                                                        l_trans_bandwidth=self._l_trans_bandwidth,
+                                                        h_trans_bandwidth=self._h_trans_bandwidth,
+                                                        verbose=verbose).astype(np.float32)
         ch_names = raw.ch_names
-
         del raw, data0
         gc.collect()
         return filter_results, ch_names
@@ -157,25 +183,26 @@ class DataGen(object):
             np.save(out_file, outputs)
 
 
-def worker(in_file, out_dir, out_prefix):
+def worker(in_file, out_dir, out_prefix, ch_mapper=None):
+    mne.set_log_level('WARNING') 
     try:
-        dg = DataGen(in_file, out_dir, out_prefix)
+        dg = DataGen(in_file, out_dir, out_prefix, ch_mapper)
         dg.get_regions()
-    except:
+    except Exception as e:
+        print(f"Error processing {in_file}: {e}")
+        import traceback
+        traceback.print_exc()
         flag = False
-        time.sleep(3.0)
     else:
         flag = True
     return in_file, flag
 
 
 if __name__=="__main__":
-    import glob, os
-    from joblib import Parallel, delayed
 
-    BASE    = "./raw_data/tusz/edf"
+    BASE    = "/Users/noelkamm/VAEEG/raw_data/tusz_mini/edf"
     out_dir = "./new_data/clips"
-    n_jobs  = 1
+    n_jobs  = 10
 
     # build task list
     tasks = []
