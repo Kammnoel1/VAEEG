@@ -4,8 +4,8 @@ import warnings
 
 import torch
 import torch.nn as nn
-from src.utils.decorator import type_assert
-from src.utils.check import *
+from utils.decorator import type_assert
+from utils.check import *
 
 
 @type_assert(model=nn.Module, ckpt_file=str)

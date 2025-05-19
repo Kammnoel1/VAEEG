@@ -1,20 +1,9 @@
-# RawData: Parameters for segmenting the raw EEG file
-RawData:
-  # Path to your raw EEG file in EEGLAB format (.set file; its .fdt file should be in the same folder)
-  in_file: "./raw_data/sep_uwgr_prepro.set"
-  # Sampling frequency of your raw data (Hz)
-  sfreq: 256
-  # Output directory where data, train and test will be saved
-  out_dir: "./new_data/"
-  # Size of test set 
-  test_size: 0.2
-
 # Train: Training hyperparameters.
 Train:
   # Directory where checkpoints and logs will be saved (subdirectories will be created per frequency band)
   model_dir: "./models"
   # Number of GPUs to use (0 for CPU-only)
-  n_gpus: 4
+  n_gpus: 0
   # Path to checkpoint file if resuming training (leave empty to train from scratch)
   ckpt_file: ""
   # Number of training epochs
@@ -25,21 +14,24 @@ Train:
   beta: 1.0
   # Frequency (in steps) at which to log training info
   n_print: 100
-  # Batch size for training
-  batch_size: 64
 
 # Model: Model architecture parameters.
 Model:
   # Number of input channels (for single-channel EEG)
   in_channels: 1
-  # Channel to be used for training
-  channel: 0
-  # Frequency band for training
-  band: "alpha"
   # Negative slope for LeakyReLU activations
   negative_slope: 0.2
   # Whether the decoder uses a final LSTM layer (set to false if not desired)
   decoder_last_lstm: false
+
+# Dataset: Parameters for the dataset.
+DataSet: 
+  # Path to the directory containing the EEG clips
+  data_dir: "./new_data/train"
+  # Length of the EEG clips
+  clip_len: 256
+  # Batch size for trainings
+  batch_size: 64
 
   
   
