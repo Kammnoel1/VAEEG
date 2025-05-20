@@ -10,9 +10,10 @@ class ClipDataset(torch.utils.data.Dataset):
     Dataset for model training.
     """
 
-    def __init__(self, data_dir, band_name, clip_len=256):
+    def __init__(self, data_dir, band_name, clip_len):
         in_file = os.path.join(data_dir, "%s.npy" % band_name)
-        self.data = np.load(in_file)
+        data = np.load(in_file)
+        self.data = data.astype(np.float32)
 
         self.band = band_name
         self.n_item, self.n_len = self.data.shape

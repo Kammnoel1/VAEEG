@@ -45,11 +45,10 @@ def save_loss_per_line(target_file, line, header):
 
 class Estimator(object):
     def __init__(self, in_model, n_gpus, device=None, ckpt_file=None):
-        if device is None:
-            self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        else:
-            self.device = device
-        self.model, self.aux, _ = init_model(in_model, n_gpus=n_gpus, ckpt_file=ckpt_file)
+        self.device = device
+        self.model, self.aux, _ = init_model(
+            in_model, n_gpus=n_gpus, ckpt_file=ckpt_file
+        )
         self.model = self.model.to(self.device)
 
     @staticmethod
@@ -64,7 +63,7 @@ class Estimator(object):
         mxx = xx.mean(dim)
         myy = yy.mean(dim)
 
-        r = (mxy - mx * my) / torch.sqrt((mxx - mx ** 2) * (myy - my ** 2))
+        r = (mxy - mx * my) / torch.sqrt((mxx - mx**2) * (myy - my**2))
         return r
 
     def train(self, input_loader, model_dir, n_epoch, lr, beta, n_print):
@@ -78,9 +77,12 @@ class Estimator(object):
         current_epoch = self.aux.get("current_epoch", 0)
         current_step = self.aux.get("current_step", 0)
 
-        optimizer = optim.RMSprop(itertools.chain(self.model.encoder.parameters(),
-                                                self.model.decoder.parameters()),
-                                lr=lr)
+        optimizer = optim.RMSprop(
+            itertools.chain(
+                self.model.encoder.parameters(), self.model.decoder.parameters()
+            ),
+            lr=lr,
+        )
 
         self.model.train()
         start_time = time.time()
@@ -89,7 +91,7 @@ class Estimator(object):
             current_epoch = current_epoch + 1
             for idx, input_x in enumerate(input_loader, 0):
                 current_step = current_step + 1
-                input_x = input_x.to(self.device)
+                input_x = input_x.to(self.device).float()
 
                 mu, log_var, xbar = self.model(input_x)
 
@@ -102,38 +104,55 @@ class Estimator(object):
                 optimizer.step()
 
                 if current_step % n_print == 0:
-                    writer.add_scalar('loss', loss, current_step)
-                    writer.add_scalar('kld_loss', kld, current_step)
-                    writer.add_scalar('rec_loss', rec, current_step)
+                    writer.add_scalar("loss", loss, current_step)
+                    writer.add_scalar("kld_loss", kld, current_step)
+                    writer.add_scalar("rec_loss", rec, current_step)
 
                     error = input_x - xbar
                     error = error.abs().mean()
-                    writer.add_scalar('mae error', error, current_step)
+                    writer.add_scalar("mae error", error, current_step)
 
                     pr = self.pearson_index(input_x, xbar)
-                    writer.add_scalar('pearsonr', pr.mean(), current_step)
+                    writer.add_scalar("pearsonr", pr.mean(), current_step)
 
                     cycle_time = (time.time() - start_time) / n_print
 
-                    values = (current_epoch, current_step, cycle_time,
-                            loss.cpu().detach().numpy(),
-                            kld.cpu().detach().numpy(),
-                            rec.cpu().detach().numpy(),
-                            error.cpu().detach().numpy(),
-                            pr.mean().cpu().detach().numpy())
+                    values = (
+                        current_epoch,
+                        current_step,
+                        cycle_time,
+                        loss.cpu().detach().numpy(),
+                        kld.cpu().detach().numpy(),
+                        rec.cpu().detach().numpy(),
+                        error.cpu().detach().numpy(),
+                        pr.mean().cpu().detach().numpy(),
+                    )
 
-                    names = ["current_epoch", "current_step", "cycle_time",
-                            "loss", "kld_loss", "rec_loss",
-                            "error", "pr"]
+                    names = [
+                        "current_epoch",
+                        "current_step",
+                        "cycle_time",
+                        "loss",
+                        "kld_loss",
+                        "rec_loss",
+                        "error",
+                        "pr",
+                    ]
 
-                    print("[Epoch %d, Step %d]: (%.3f s / cycle])\n"
-                          "  loss: %.3f; kld_loss: %.3f; rec: %.3f;\n"
-                          "  mae error: %.3f; pr: %.3f.\n"
-                          % values)
+                    print(
+                        "[Epoch %d, Step %d]: (%.3f s / cycle])\n"
+                        "  loss: %.3f; kld_loss: %.3f; rec: %.3f;\n"
+                        "  mae error: %.3f; pr: %.3f.\n" % values
+                    )
 
-                    img = batch_imgs(input_x.cpu().detach().numpy()[:, 0, :],
-                                   xbar.cpu().detach().numpy()[:, 0, :],
-                                   256, 4, 2, fig_size=(8, 5))
+                    img = batch_imgs(
+                        input_x.cpu().detach().numpy()[:, 0, :],
+                        xbar.cpu().detach().numpy()[:, 0, :],
+                        256,
+                        4,
+                        2,
+                        fig_size=(8, 5),
+                    )
                     writer.add_image("signal", img, current_step, dataformats="HWC")
                     start_time = time.time()
 
@@ -141,64 +160,77 @@ class Estimator(object):
                     fmt_str = "%d,%d" + ",%.3f" * n_float
                     save_loss_per_line(loss_file, fmt_str % values, ",".join(names))
 
-            out_ckpt_file = os.path.join(model_dir, "ckpt_epoch_%d.ckpt" % current_epoch)
-            save_model(self.model, out_file=out_ckpt_file,
-                      auxiliary=dict(current_step=current_step,
-                                   current_epoch=current_epoch))
+            out_ckpt_file = os.path.join(
+                model_dir, "ckpt_epoch_%d.ckpt" % current_epoch
+            )
+            save_model(
+                self.model,
+                out_file=out_ckpt_file,
+                auxiliary=dict(current_step=current_step, current_epoch=current_epoch),
+            )
         writer.close()
 
 
+def run_training(yaml_file: str, z_dim: int, band_name: str):
+    with open(yaml_file, "r") as f:
+        cfg = yaml.safe_load(f)
+    train_params = cfg["Train"]
+    model_params = cfg["Model"]
+    dataset_params = cfg["DataSet"]
+    model_params["z_dim"] = z_dim
+    model_params["name"] = band_name
+
+    m_dir = os.path.join(train_params["model_dir"], model_params["name"], f"z{z_dim}")
+    os.makedirs(m_dir, exist_ok=True)
+
+    model = VAEEG(
+        in_channels=model_params["in_channels"],
+        z_dim=model_params["z_dim"],
+        negative_slope=model_params["negative_slope"],
+        decoder_last_lstm=model_params["decoder_last_lstm"],
+    )
+    dev = torch.device('cpu' if train_params["n_gpus"] == 0 else 'cuda')
+    est = Estimator(
+        in_model=model,
+        n_gpus=train_params["n_gpus"],
+        device=dev,
+        ckpt_file=train_params.get("ckpt_file"),
+    )
+
+    ds = ClipDataset(
+        data_dir=dataset_params["data_dir"],
+        band_name=model_params["name"],
+        clip_len=dataset_params["clip_len"],
+    )
+    loader = torch.utils.data.DataLoader(
+        ds,
+        shuffle=True,
+        batch_size=dataset_params["batch_size"],
+        drop_last=True,
+        num_workers=dataset_params.get("num_workers", 0),
+    )
+
+    est.train(
+        input_loader=loader,
+        model_dir=m_dir,
+        n_epoch=train_params["n_epoch"],
+        lr=train_params["lr"],
+        beta=train_params["beta"],
+        n_print=train_params["n_print"],
+    )
+
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Training Model')
-    parser.add_argument('--yaml_file', type=str, required=True,
-                        help="configures, path of .yaml file")
-    parser.add_argument('--z_dim', type=int, required=True,
-                        help="z_dim")
-    parser.add_argument('--device', type=str, default=None,
-                        help="Device to use (cuda/cpu)")
-    parser.add_argument('--band_name', type=str, default=None,
-                        help="Band name")
-    opts = parser.parse_args()
+    parser = argparse.ArgumentParser(description="Training Model")
+    parser.add_argument(
+        "--yaml_file", type=str, required=True, help="configures, path of .yaml file"
+    )
+    parser.add_argument("--z_dim", type=int, required=True, help="z_dim")
+    parser.add_argument("--band_name", type=str, default=None, help="Band name")
+    args = parser.parse_args()
 
-    with open(opts.yaml_file, 'r') as file:
-        configs = yaml.safe_load(file)
-
-    train_params = configs["Train"]
-    model_params = configs["Model"]
-    dataset_params = configs["DataSet"]
-    model_params["z_dim"] = opts.z_dim
-    model_params["name"] = opts.band_name
-
-    if not os.path.isdir(train_params["model_dir"]):
-        os.makedirs(train_params["model_dir"])
-
-    # config model
-    model = VAEEG(in_channels=model_params["in_channels"],
-                  z_dim=model_params["z_dim"],
-                  negative_slope=model_params["negative_slope"],
-                  decoder_last_lstm=model_params["decoder_last_lstm"])
-
-    # init estimator
-    device = torch.device(opts.device) if opts.device else None
-    est = Estimator(model, train_params["n_gpus"], device=device, ckpt_file=train_params["ckpt_file"])
-    m_dir = os.path.join(train_params["model_dir"],
-                        model_params["name"],  
-                        f"z{opts.z_dim}"  
-                        )
-
-    # load dataset
-    train_ds = ClipDataset(data_dir=dataset_params["data_dir"],
-                          band_name=model_params["name"],
-                          clip_len=dataset_params["clip_len"])
-
-    train_loader = torch.utils.data.DataLoader(train_ds, shuffle=True,
-                                             batch_size=dataset_params["batch_size"],
-                                             drop_last=True,
-                                             num_workers=0)
-    est.train(input_loader=train_loader,
-              model_dir=m_dir,
-              n_epoch=train_params["n_epoch"],
-              lr=train_params["lr"],
-              beta=train_params["beta"],
-              n_print=train_params["n_print"]
-              )
+    run_training(
+        yaml_file=args.yaml_file,
+        z_dim=args.z_dim,
+        band_name=args.band_name,
+    )

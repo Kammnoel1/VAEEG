@@ -1,90 +1,87 @@
+# pipeline.py
+import os
+import glob
 import argparse
 import yaml
-import os
-import itertools
 
-# Import the pipeline functions from your modules.
-from src.gen_data import generate_full
-from src.split_data import split_memmap
-import src.gen_data
-import src.train_vae
+from src.gen_data import generate_clips
+from src.split_dataset import split_dataset
+from src.train_vae import run_training
+
 
 def main():
-    parser = argparse.ArgumentParser(description="End-to-End Pipeline for VAEEG")
-    parser.add_argument("--yaml_file", type=str, required=True,
-                        help="Path to the YAML configuration file")
-    parser.add_argument("--z_dim", type=int, required=True,
-                        help="Latent space dimension for training")
+    parser = argparse.ArgumentParser(
+        description="Full EEG VAE pipeline: clip generation, dataset split, and training"
+    )
+    parser.add_argument(
+        "--raw_base",
+        required=True,
+        help="Root directory containing EDFs organized by subfolders",
+    )
+    parser.add_argument(
+        "--out_base",
+        required=True,
+        help="Output base directory for generated clips and splits",
+    )
+    parser.add_argument(
+        "--yaml_file",
+        required=True,
+        help="Path to the YAML file containing training configuration",
+    )
+    parser.add_argument(
+        "--z_dim", type=int, default=50, help="Latent space dimension for VAE"
+    )
+    parser.add_argument(
+        "--n_jobs",
+        type=int,
+        default=10,
+        help="Number of parallel jobs for preprocessing",
+    )
+    parser.add_argument(
+        "--ratio",
+        type=float,
+        default=0.1,
+        help="Fraction of data reserved for test set",
+    )
     args = parser.parse_args()
 
-    # Load the configuration from YAML.
+    # 1. Generate all EEG clips into one folder
+    clips_dir = os.path.join(args.out_base, "clips")
+    os.makedirs(clips_dir, exist_ok=True)
+    print("Generating EEG clips...")
+    generate_clips(base_dir=args.raw_base, out_base=clips_dir, n_jobs=args.n_jobs)
+
+    # 2. Split into train/test and merge per-band
+    print("Splitting dataset and merging per band...")
+    dirs = split_dataset(
+        base_dir=args.out_base,
+        ratio=args.ratio,
+        n_jobs=args.n_jobs,
+    )
+    train_dir = dirs["train"]
+    print(f"Train data directory: {train_dir}")
+
+    # 3. Load and update configuration
     with open(args.yaml_file, "r") as f:
-        config = yaml.safe_load(f)
+        configs = yaml.safe_load(f)
 
-    #############################################
-    # Step 1: Data Segmentation and Partitioning
-    #############################################
-    
-    raw_config = config.get("RawData", {})
-    raw_in_file = raw_config.get("in_file")
-    sfreq = raw_config.get("sfreq")
-    out_dir = raw_config.get("out_dir")
-    num_workers = raw_config.get("num_workers")
-    ratio = raw_config.get("ratio")
-    
-    print("=== Step 1: Generating data ===")
-    data_path = generate_full(raw_in_file, sfreq, out_dir, num_workers)
+    configs["DataSet"]["data_dir"] = train_dir
 
-    #############################################
-    # Step 3: Data Splitting
-    #############################################
+    # 4. Train VAEs for each band
+    band_names = ["alpha", "theta", "low_beta", "high_beta", "delta"]
+    for band in band_names:
+        print(f"=== Starting training for band: {band} ===")
+        # update model name in config
+        configs["Model"]["name"] = band
 
-    print("=== Step 1: Splitting data ===")
-    paths = split_memmap(data_path, ratio, out_dir)
+        # write a temporary YAML for this band
+        tmp_yaml = os.path.join(args.out_base, f"config_{band}.yaml")
+        with open(tmp_yaml, "w") as yf:
+            yaml.safe_dump(configs, yf)
 
-    #############################################
-    # Step 2: Train Models for Each Frequency Band
-    #############################################
-    
-    print("=== Step 2: Training models for each frequency band ===")
-    # Define the grid of hyperparameter values.
-    # n_epoch_options = [50]
-    # lr_options = [0.01]
-    # z_dim_options = [50]
-    # negative_slope_options = [0.2]
-    # decoder_last_lstm_options = [True, False]
-    # batch_size_options = [64]
-    # # You can add more hyperparameters as needed.
+        # run training
+        run_training(yaml_file=tmp_yaml, z_dim=args.z_dim, band_name=band)
 
-    # # Generate all combinations.
-    # for n_epoch, lr, z_dim, negative_slope, decoder_last_lstm, batch_size in itertools.product(
-    #         n_epoch_options,
-    #         lr_options,
-    #         z_dim_options,
-    #         negative_slope_options,
-    #         decoder_last_lstm_options,
-    #         batch_size_options
-    # ):
-    #     # Update your config (loaded from YAML) with these values.
-    #     config["Train"]["n_epoch"] = n_epoch
-    #     config["Train"]["lr"] = lr
-    #     config["Model"]["z_dim"] = z_dim
-    #     config["Model"]["negative_slope"] = negative_slope
-    #     config["Model"]["decoder_last_lstm"] = decoder_last_lstm
-    #     config["DataSet"]["batch_size"] = batch_size 
-
-    #     # Optionally, log or print the current hyperparameter combination.
-    #     print(
-    #         f"Training with n_epoch={n_epoch}, lr={lr}, z_dim={z_dim}, "
-    #         f"negative_slope={negative_slope}, decoder_last_lstm={decoder_last_lstm}, "
-    #         f"batch_size={batch_size}"
-    #     )
-    z_dim = args.z_dim     
-    for band in ["delta", "theta", "alpha", "low_beta", "high_beta"]:
-        src.train_vae.train_model_for_band(band, config, z_dim, paths)
-
-    print("Pipeline completed successfully.")
 
 if __name__ == "__main__":
     main()
-

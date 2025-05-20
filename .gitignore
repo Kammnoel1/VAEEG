@@ -13,3 +13,5 @@ __pycache__/
 /logs/
 # Ignore temporary scripts
 src/temp_scripts/
+# Ignore temporary model checkpoints
+/models/

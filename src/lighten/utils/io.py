@@ -12,7 +12,6 @@ def load_raw_(datafile_list, preload=False):
     final_raw: mne raw
 
     """
-    print("Entering load_raw")
     raw_list = []
     if type(datafile_list) == list:
         if len(datafile_list) == 0:

@@ -26,7 +26,7 @@ Model:
 
 # Dataset: Parameters for the dataset.
 DataSet: 
-  # Path to the directory containing the EEG clips
+  # Path to the directory containing the preprocessed data
   data_dir: "./new_data/train"
   # Length of the EEG clips
   clip_len: 256
