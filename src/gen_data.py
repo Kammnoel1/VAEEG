@@ -110,42 +110,63 @@ class DataGen:
     def _filter_intervalset(input_set, threshold):
         return [iv for iv in input_set if iv.upper_bound - iv.lower_bound > threshold]
 
-    def get_regions(self, seg_len=5.0, amp_threshold=400,
-                    merge_len=1.0, drop=60.0):
+    def get_regions(self, seg_len=5.0, amp_threshold=400, merge_len=1.0, drop=60.0):
+        """
+        :param seg_len: unit s, keep > seg_len
+        :param amp_threshold: unit uV, keep < amp_threshold
+        :param merge_len: unit s
+        :param drop: unit s, drop regions at the first and in the end.
+        :return:
+        """
         data = self.data["whole"]
-        seg_thr = int(seg_len * self._SFREQ)
-        m_thr = int(merge_len * self._SFREQ)
+        m_threshold = int(merge_len * self._SFREQ)
+        seg_threshold = int(seg_len * self._SFREQ)
         start = int(drop * self._SFREQ)
-        end = data.shape[1] - start
+        end = data.shape[1] - int(drop * self._SFREQ)
 
-        whole = lui.IntervalSet([lui.Interval(start, end)])
-        art = lui.find_continuous_area_2d(np.abs(data) * 1e6 > amp_threshold)
-        cleaned = [whole.difference(lui.merge_continuous_area(s, threshold=m_thr)) for s in art]
-        intervals = [self._filter_intervalset(s, seg_thr) for s in cleaned]
+        whole_r = lui.IntervalSet([lui.Interval(lower_bound=start, upper_bound=end)])
 
-        rows = []
-        for ch_idx, ivs in enumerate(intervals):
-            for iv in ivs:
-                points = np.arange(iv.lower_bound, iv.upper_bound+1, seg_thr)
-                for s, e in zip(points[:-1], points[1:]):
-                    rows.append((ch_idx, self.ch_names[ch_idx], s, e))
-        df = pd.DataFrame(rows, columns=["idx", "ch_name", "start", "stop"])
+        flag = np.abs(data) * 1e6 > amp_threshold
+        art = lui.find_continuous_area_2d(flag)
+        c_art = [lui.merge_continuous_area(s, threshold=m_threshold) for s in art]
+        c_clean = [whole_r.difference(s) for s in c_art]
 
-        udata = np.stack([
-            self.data[b] for b in self._BANDS.keys()
-        ], axis=0) * 1e6
+        keep_clean = [self._filter_intervalset(s, seg_threshold) for s in c_clean]
 
-        recs = list(zip(df.idx, df.start, df.stop))
-        if len(recs) > self.max_clips:
-            recs = random.sample(recs, self.max_clips)
+        out = []
+        for idx, item_set in enumerate(keep_clean, 0):
+            for item in item_set:
+                tmp = np.arange(item.lower_bound, item.upper_bound + 1, seg_threshold)
+                if len(tmp) > 1:
+                    for idj in range(len(tmp) - 1):
+                        out.append([idx, self.ch_names[idx], tmp[idj], tmp[idj + 1]])
 
-        clips = [udata[:, i, s:e] for i, s, e in recs]
-        out = np.stack(clips, axis=0).astype(np.float32)
+        df_clean = pd.DataFrame(out, columns=["idx", "ch_names", "clip_start", "clip_stop"])
+      
 
-        out_file = os.path.join(self.out_dir, f"{self.out_prefix}.npy")
-        os.makedirs(self.out_dir, exist_ok=True)
-        np.save(out_file, out)
-        return out_file
+        udata = np.stack([self.data["whole"],
+                          self.data["delta"],
+                          self.data["theta"],
+                          self.data["alpha"],
+                          self.data["low_beta"],
+                          self.data["high_beta"]], axis=0) * 1.0e6
+
+        ts = list(zip(df_clean.idx, df_clean.clip_start, df_clean.clip_stop))
+
+        # Only keep signal segments of which there are at least 200.
+        if len(ts) >= 200:
+            if len(ts) > self.max_clips:
+                ts = random.sample(ts, self.max_clips)
+
+            outputs = []
+            for p in ts:
+                idx, start, stop = p
+                tmp = udata[:, idx, start:stop]
+                outputs.append(tmp)
+
+            outputs = np.stack(outputs, axis=0)
+            out_file = os.path.join(self.out_dir, "%s.npy" % self.out_prefix)
+            np.save(out_file, outputs)
 
 def worker(in_file, out_dir, out_prefix, ch_mapper=None):
     """
