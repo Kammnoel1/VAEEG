@@ -1,13 +1,13 @@
 # Train: Training hyperparameters.
 Train:
   # Directory where checkpoints and logs will be saved (subdirectories will be created per frequency band)
-  model_dir: "./models"
+  model_dir: "/u/noka/VAEEG/models"
   # Number of GPUs to use (0 for CPU-only)
-  n_gpus: 0
+  n_gpus: 4
   # Path to checkpoint file if resuming training (leave empty to train from scratch)
   ckpt_file: ""
   # Number of training epochs
-  n_epoch: 5
+  n_epoch: 100
   # Learning rate for the optimizer
   lr: 0.001
   # Weight factor for the KL divergence term
@@ -27,11 +27,13 @@ Model:
 # Dataset: Parameters for the dataset.
 DataSet: 
   # Path to the directory containing the preprocessed data
-  data_dir: "./new_data/train"
+  data_dir: "/ptmp/noka/tusz_new/train"
   # Length of the EEG clips
   clip_len: 256
   # Batch size for trainings
-  batch_size: 64
+  batch_size: 16384
+  # Number of workers for data loading
+  num_workers: 71
 
   
   
