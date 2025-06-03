@@ -15,3 +15,5 @@ __pycache__/
 src/temp_scripts/
 # Ignore temporary model checkpoints
 /models/
+# Ignore TensorBoard logs
+/tensorboard/
