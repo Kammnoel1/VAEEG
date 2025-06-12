@@ -4,6 +4,7 @@ import warnings
 
 import torch
 import torch.nn as nn
+import torch.distributed as dist
 from utils.decorator import type_assert
 from utils.check import *
 
@@ -64,35 +65,44 @@ def save_model(model, out_file, auxiliary=None):
 
 @type_assert(m=nn.Module, n_gpus=int)
 def init_model(m, n_gpus, ckpt_file=None):
+    """
+    Initialize model with optional checkpoint, GPU/DP wrapper.
+    """
     check_type("ckpt_file", ckpt_file, [str, type(None)])
 
+    # decide device
     n_gpu = min(max(n_gpus, 0), torch.cuda.device_count())
-    device = "cuda" if n_gpu > 0 else "cpu"
-
-    if isinstance(ckpt_file, str):
-        if os.path.isfile(ckpt_file):
-            print("Initial model from %s" % ckpt_file)
-            aux = load_model(m, ckpt_file)
-        else:
-            warnings.warn("The given checkpoint file is not found: %s. "
-                          "Initial model randomly instead." % ckpt_file)
-            aux = {}
-    else:
-        print("Initial model randomly")
-        aux = {}
-
-    msg = "Assign model to %s device." % device
-
-    if n_gpu > 1:
-        msg += "Using %d gpus." % n_gpus
-    elif n_gpu == 1:
-        msg += "Using 1 gpu."
-
-    print(msg)
+    device = torch.device("cuda" if n_gpu > 0 else "cpu")
     m.to(device)
 
+    # wrap for distributed if needed
     if n_gpu > 1:
-        om = nn.DataParallel(m, list(range(n_gpu)))
+        rank = int(os.environ.get("SLURM_PROCID", 0))
+        world_size = int(os.environ.get("SLURM_NTASKS", n_gpu))
+        dist.init_process_group(
+            backend="nccl",
+            init_method="env://",
+            world_size=world_size,
+            rank=rank,
+        )
+        torch.cuda.set_device(rank % torch.cuda.device_count())
+        m.to(device)
+        wrapped = nn.parallel.DistributedDataParallel(
+            m,
+            device_ids=[torch.cuda.current_device()],
+            output_device=torch.cuda.current_device(),
+            find_unused_parameters=False
+        )
     else:
-        om = m
-    return om, aux, device
+        wrapped = m
+
+    aux = {}
+    if isinstance(ckpt_file, str) and os.path.isfile(ckpt_file):
+        print(f"Initializing model from {ckpt_file}")
+        from model.opts.ckpt import load_model
+        aux = load_model(wrapped, ckpt_file)
+    elif isinstance(ckpt_file, str):
+        warnings.warn(f"Checkpoint not found: {ckpt_file}. Initializing randomly.")
+
+    print(f"Model assigned to {device}{' with DDP' if n_gpu>1 else ''}.")
+    return wrapped, aux, device

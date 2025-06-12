@@ -10,6 +10,8 @@ import torch.utils.data
 import yaml
 from torch import optim
 from torch.utils.tensorboard import SummaryWriter
+from torch.utils.data.distributed import DistributedSampler
+import torch.distributed as dist
 
 _CURRENT_DIR = os.path.abspath(os.path.dirname(__file__))
 sys.path.append(_CURRENT_DIR)
@@ -44,12 +46,10 @@ def save_loss_per_line(target_file, line, header):
 
 
 class Estimator(object):
-    def __init__(self, in_model, n_gpus, device=None, ckpt_file=None):
-        self.device = device
-        self.model, self.aux, _ = init_model(
-            in_model, n_gpus=n_gpus, ckpt_file=ckpt_file
-        )
-        self.model = self.model.to(self.device)
+    def __init__(self, in_model, n_gpus, ckpt_file=None):
+        self.model, self.aux, self.device = init_model(in_model,
+                                                       n_gpus=n_gpus,
+                                                       ckpt_file=ckpt_file)
 
     @staticmethod
     def pearson_index(x, y, dim=-1):
@@ -76,23 +76,27 @@ class Estimator(object):
 
         current_epoch = self.aux.get("current_epoch", 0)
         current_step = self.aux.get("current_step", 0)
-
+        base_model = self.model.module if isinstance(self.model, torch.nn.parallel.DistributedDataParallel) else self.model
         optimizer = optim.RMSprop(
             itertools.chain(
-                self.model.encoder.parameters(), self.model.decoder.parameters()
+                base_model.encoder.parameters(), base_model.decoder.parameters()
             ),
             lr=lr,
         )
 
         self.model.train()
         start_time = time.time()
-
+        rank = dist.get_rank() if dist.is_initialized() else 0
+        dataset_len = len(input_loader.dataset)
+        num_batches = len(input_loader)
+        if rank == 0:
+            print(f"Dataset has {dataset_len} samples, {num_batches} batches (batch_size={input_loader.batch_size})")
         for ie in range(n_epoch):
             current_epoch = current_epoch + 1
+            input_loader.sampler.set_epoch(current_epoch)
             for idx, input_x in enumerate(input_loader, 0):
                 current_step = current_step + 1
-                input_x = input_x.to(self.device).float()
-
+                input_x = input_x.to(self.device, non_blocking=True)
                 mu, log_var, xbar = self.model(input_x)
 
                 kld = kl_loss(mu, log_var)
@@ -160,14 +164,20 @@ class Estimator(object):
                     fmt_str = "%d,%d" + ",%.3f" * n_float
                     save_loss_per_line(loss_file, fmt_str % values, ",".join(names))
 
-            out_ckpt_file = os.path.join(
-                model_dir, "ckpt_epoch_%d.ckpt" % current_epoch
-            )
-            save_model(
-                self.model,
-                out_file=out_ckpt_file,
-                auxiliary=dict(current_step=current_step, current_epoch=current_epoch),
-            )
+            if rank == 0:
+                out_ckpt_file = os.path.join(
+                    model_dir, f"ckpt_epoch_{current_epoch}.ckpt"
+                )
+                save_model(
+                    self.model,
+                    out_file=out_ckpt_file,
+                    auxiliary=dict(
+                        current_step=current_step,
+                        current_epoch=current_epoch,
+                    ),
+                )
+        if dist.is_initialized():
+            dist.barrier()
         writer.close()
 
 
@@ -189,11 +199,9 @@ def run_training(yaml_file: str, z_dim: int, band_name: str):
         negative_slope=model_params["negative_slope"],
         decoder_last_lstm=model_params["decoder_last_lstm"],
     )
-    dev = torch.device('cpu' if train_params["n_gpus"] == 0 else 'cuda')
     est = Estimator(
         in_model=model,
         n_gpus=train_params["n_gpus"],
-        device=dev,
         ckpt_file=train_params.get("ckpt_file"),
     )
 
@@ -202,12 +210,20 @@ def run_training(yaml_file: str, z_dim: int, band_name: str):
         band_name=model_params["name"],
         clip_len=dataset_params["clip_len"],
     )
-    loader = torch.utils.data.DataLoader(
+
+    sampler = DistributedSampler(
         ds,
+        num_replicas=dist.get_world_size(),
+        rank=dist.get_rank(),
         shuffle=True,
-        batch_size=dataset_params["batch_size"],
-        drop_last=True,
-        num_workers=dataset_params.get("num_workers", 0),
+    )
+    loader = torch.utils.data.DataLoader(
+    ds,
+    sampler=sampler,
+    batch_size=dataset_params["batch_size"] // dist.get_world_size(),
+    num_workers=dataset_params["num_workers"],
+    pin_memory=True,
+    persistent_workers=True,
     )
 
     est.train(

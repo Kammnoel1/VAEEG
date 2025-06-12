@@ -1,29 +1,33 @@
 import argparse
 import os
+import sys 
+
+sys.path.insert(0, os.path.dirname(__file__))
 import yaml
 import torch
 import numpy as np
 from torch.utils.data import DataLoader
 from model.opts.dataset import ClipDataset
 from model.opts.ckpt import init_model
-from model.net.modelA import VAEEG
 from model.net.modelA import VAEEG, re_parameterize
 
 
 def get_sampled_latent(model, loader, device, z_dim):
     model.eval()
     num_samples = len(loader.dataset)
-    z_arr = np.array((num_samples, z_dim), dtype=np.float32)
+    z_arr = np.zeros((num_samples, z_dim), dtype=np.float32)  
     idx = 0
+    encoder = model.module.encoder if hasattr(model, 'module') else model.encoder
     with torch.no_grad():
         for x in loader:
             x = x.to(device)
-            mu, log_var = model.encoder(x)
+            mu, log_var = encoder(x)
             z_batch = re_parameterize(mu, log_var)
             bs = z_batch.size(0)
             z_arr[idx:idx + bs, :] = z_batch.cpu().numpy()
             idx += bs
     return z_arr
+
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser()
@@ -60,7 +64,26 @@ if __name__ == '__main__':
         band_name=model_params['name'],
         clip_len=dataset_params['clip_len'],
     )
-    loader = DataLoader(ds, batch_size=dataset_params['batch_size'], num_workers=dataset_params['num_workers'], shuffle=False)
+    loader = DataLoader(
+        ds,
+        batch_size=dataset_params['batch_size'],
+        num_workers=dataset_params['num_workers'],
+        shuffle=False
+    )
 
-    # run evaluation
-    get_sampled_latent(model=model, loader=loader, device=device, z_dim=model_params['z_dim'], bs=dataset_params['batch_size'])
+    # run evaluation and collect all latent vectors
+    z_all = get_sampled_latent(
+        model=model,
+        loader=loader,
+        device=device,
+        z_dim=model_params['z_dim']
+    )
+
+    save_dir = "/ptmp/noka/tusz_new/analysis"
+    os.makedirs(save_dir, exist_ok=True)
+    save_path = os.path.join(
+        save_dir,
+        f"{args.band_name}_z{args.z_dim}.npy"
+    )
+    np.save(save_path, z_all)
+    print(f"Saved latent vectors to {save_path}")
