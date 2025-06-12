@@ -45,12 +45,12 @@ def main():
     )
     p.add_argument(
         "--out_folder",
-        required=True,
+        default="/u/noka/VAEEG/figs",
         help="Directory to save the plot"
     )
     p.add_argument(
         "--out_name",
-        default="pca_full_data.png",
+        default="pca.png",
         help="Filename for the saved plot"
     )
     p.add_argument(
