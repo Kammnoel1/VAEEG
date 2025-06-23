@@ -79,11 +79,11 @@ if __name__ == '__main__':
         z_dim=model_params['z_dim']
     )
 
-    save_dir = "/ptmp/noka/tusz_new/analysis"
+    save_dir = "/ptmp/noka/analysis/tusz/latent/"
     os.makedirs(save_dir, exist_ok=True)
     save_path = os.path.join(
         save_dir,
-        f"{args.band_name}_z{args.z_dim}.npy"
+        f"{args.band_name}_z{args.z_dim}_train.npy"
     )
     np.save(save_path, z_all)
     print(f"Saved latent vectors to {save_path}")

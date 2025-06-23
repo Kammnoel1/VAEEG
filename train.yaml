@@ -11,7 +11,7 @@ Train:
   # Learning rate for the optimizer
   lr: 0.001
   # Weight factor for the KL divergence term
-  beta: 1.0
+  beta: 4.0
   # Frequency (in steps) at which to log training info
   n_print: 100
 
@@ -27,14 +27,10 @@ Model:
 # Dataset: Parameters for the dataset.
 DataSet: 
   # Path to the directory containing the preprocessed data
-  data_dir: "/ptmp/noka/tusz_new/train"
+  data_dir: "/ptmp/noka/new_data/tusz/train"
   # Length of the EEG clips
   clip_len: 256
   # Batch size for trainings
   batch_size: 16384
   # Number of workers for data loading
   num_workers: 71
-
-  
-  
-  

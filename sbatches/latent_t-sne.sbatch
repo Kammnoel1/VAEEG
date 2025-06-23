@@ -43,4 +43,4 @@ export PYTHONPATH=${SLURM_SUBMIT_DIR}/src:$PYTHONPATH
 export LD_LIBRARY_PATH=${CUDA_HOME}/extras/CUPTI/lib64:${LD_LIBRARY_PATH}
 
 # Run your pipeline script with the provided YAML configuration and z_dim.
-srun python -m src.analysis.latent_t_sne --input_latent /ptmp/noka/tusz_new/analysis/alpha_z50.npy --input_labels /ptmp/noka/tusz_new/analysis/alpha_z50_labels.npy --band "alpha" --output_emb /ptmp/noka/tusz_new/analysis/ --num_workers ${SLURM_CPUS_PER_TASK}
+srun python -m src.analysis.latent_t_sne --input_latent /ptmp/noka/tusz_new/analysis/alpha_z32.npy --input_labels /ptmp/noka/tusz_new/analysis/alpha_z50_labels.npy --band "alpha" --output_emb /ptmp/noka/tusz_new/analysis/ --num_workers ${SLURM_CPUS_PER_TASK}
