@@ -17,3 +17,7 @@ src/temp_scripts/
 /models/
 # Ignore TensorBoard logs
 /tensorboard/
+# Ignore sbatch files 
+/sbatches/
+# Ignore test file 
+test.py
