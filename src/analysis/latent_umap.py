@@ -66,6 +66,12 @@ def main():
         default=1,
         help="Number of parallel jobs for UMAP computation."
     )
+    p.add_argument(
+        "--split",
+        type=str,
+        required=True,
+        help="Data split identifier (e.g., 'train', 'test')."
+    )
     args = p.parse_args()
 
     # Load data
@@ -107,18 +113,18 @@ def main():
     # Save results
     os.makedirs(args.output_emb, exist_ok=True)
     
-    # Save embedding only
+    # Save embedding only with new naming convention: {band}_umap_{n_components}d_{split}.npy
     save_path = os.path.join(
         args.output_emb,
-        f"{args.band}_umap{args.n_components}d.npy"
+        f"{args.band}_umap_{args.n_components}d_{args.split}.npy"
     )
     np.save(save_path, Y)
     print(f"Saved UMAP embedding to: {save_path}")
     
-    # Save embedding with labels
+    # Save embedding with labels with new naming convention
     bundle_path = os.path.join(
         args.output_emb, 
-        f"{args.band}_umap{args.n_components}d_with_labels.npz"
+        f"{args.band}_umap_{args.n_components}d_{args.split}_with_labels.npz"
     )
     np.savez(
         bundle_path,

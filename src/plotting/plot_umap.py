@@ -70,13 +70,9 @@ def main():
         help="Directory where the plot image will be saved"
     )
     parser.add_argument(
-        "--out_name",
-        default="umap_plot.png",
-        help="Filename for the saved plot (default: umap_plot.png)"
-    )
-    parser.add_argument(
         "--band",
         type=str,
+        required=True,
         help="Frequency band name to include in the plot title and filename"
     )
     args = parser.parse_args()
@@ -85,14 +81,8 @@ def main():
     data = np.load(args.input_npz)
     umap_array = data["embedding"]
     labels     = data["labels"]
-    
-    print(f"Loaded UMAP embedding: {umap_array.shape}")
-    print(f"Loaded labels: {labels.shape}")
 
-    # Update output name and title if band is specified
-    if args.band:
-        if args.out_name == "umap_plot.png":  # Using default name
-            args.out_name = f"{args.band}_umap_plot.png"
+    args.out_name = f"{args.band}_umap.png"
 
     plot_umap(umap_array, labels, args.out_folder, args.out_name)
 

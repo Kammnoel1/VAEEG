@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 
 
-def plot_tsne(tsne_array, labels, out_folder, out_name="tsne_plot.png"):
+def plot_tsne(tsne_array, labels, out_folder, out_name):
     """
     Creates a 2D scatter plot of a t-SNE embedding, colored by labels, and saves it to disk.
 
@@ -69,17 +69,14 @@ def main():
         type=str,
         help="Directory where the plot image will be saved"
     )
-    parser.add_argument(
-        "--out_name",
-        default="tsne_32d_plot.png",
-        help="Filename for the saved plot (default: tsne_plot.png)"
-    )
     args = parser.parse_args()
 
     # Load both arrays from the .npz bundle
     data = np.load(args.input_npz)
     tsne_array = data["embedding"]
     labels     = data["labels"]
+
+    args.out_name = f"{args.band}_tsne.png"
 
     plot_tsne(tsne_array, labels, args.out_folder, args.out_name)
 

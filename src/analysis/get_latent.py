@@ -83,7 +83,7 @@ if __name__ == '__main__':
     os.makedirs(save_dir, exist_ok=True)
     save_path = os.path.join(
         save_dir,
-        f"{args.band_name}_z{args.z_dim}_train.npy"
+        f"{args.band_name}_z{args.z_dim}_test.npy"
     )
     np.save(save_path, z_all)
     print(f"Saved latent vectors to {save_path}")
