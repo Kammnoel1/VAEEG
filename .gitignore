@@ -21,3 +21,4 @@ src/temp_scripts/
 /sbatches/
 # Ignore test file 
 test.py
+src/test.py
