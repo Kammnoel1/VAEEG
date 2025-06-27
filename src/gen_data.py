@@ -15,6 +15,37 @@ from lighten.utils.io import load_raw_
 from tqdm import tqdm
 
 
+def parse_label_file(edf_path):
+    """
+    Parse the corresponding .csv_bi file for an EDF file to determine if seizure is present.
+    
+    Args:
+        edf_path: Path to the EDF file
+        
+    Returns:
+        int: 1 if seizure is present, 0 if only background
+    """
+    # Construct the corresponding .csv_bi file path
+    csv_bi_path = edf_path.replace('.edf', '.csv_bi')
+    
+    if not os.path.exists(csv_bi_path):
+        print(f"Warning: Label file not found for {edf_path}")
+        return 0  # Default to background if no label file
+    
+    try:
+        # Read the CSV file, skipping comment lines that start with #
+        df = pd.read_csv(csv_bi_path, comment='#')
+        
+        # Check if any row contains 'seiz' in the label column
+        has_seizure = (df['label'] == 'seiz').any()
+        
+        return 1 if has_seizure else 0
+        
+    except Exception as e:
+        print(f"Error parsing label file {csv_bi_path}: {e}")
+        return 0  # Default to background if parsing fails
+
+
 class DataGen:
     _SFREQ = 256.0
     max_clips = 500
@@ -171,24 +202,34 @@ class DataGen:
 def worker(in_file, out_dir, out_prefix, ch_mapper=None):
     """
     Process one EDF file to generate its clip .npy in out_dir with name out_prefix.npy.
-    Returns output_path on success, or None on failure.
+    Returns (output_path, label) on success, or (None, None) on failure.
     """
     os.makedirs(out_dir, exist_ok=True)
     try:
+        # Get the label for this EDF file
+        label = parse_label_file(in_file)
+        
         dg = DataGen(in_file, out_dir, out_prefix, ch_mapper)
         out_file = dg.get_regions()
-        return out_file
+        
+        # Only return the result if the .npy file was actually created
+        npy_path = os.path.join(out_dir, f"{out_prefix}.npy")
+        if os.path.exists(npy_path):
+            return (npy_path, label)
+        else:
+            return (None, None)
     except Exception as e:
         print(f"Error processing {in_file}: {e}")
-        return None
+        return (None, None)
 
 
-def generate_clips(base_dir, out_base, n_jobs=10):
+def generate_clips(base_dir, out_base, n_jobs):
     """
     Discover all EDFs under each subdirectory of base_dir,
     and generate clips for each into a single out_base directory.
 
     All .npy files (one per EDF) will be placed directly in out_base.
+    Also creates a CSV file mapping each .npy file to its label.
     """
     # find all EDF files under base_dir/<any_split>/...
     splits = [d for d in os.listdir(base_dir)
@@ -208,6 +249,31 @@ def generate_clips(base_dir, out_base, n_jobs=10):
         for edf_path, out_base, prefix in tqdm(tasks)
     )
 
+    # Filter out failed results and create label mapping
+    successful_results = [(npy_path, label) for npy_path, label in results if npy_path is not None]
+    
+    if successful_results:
+        # Create DataFrame with file paths and labels
+        label_data = []
+        for npy_path, label in successful_results:
+            # Use relative path from out_base for cleaner CSV
+            rel_path = os.path.relpath(npy_path, out_base)
+            label_data.append({
+                'npy_path': rel_path,
+                'label': label
+            })
+        
+        # Save to CSV
+        label_df = pd.DataFrame(label_data)
+        label_csv_path = os.path.join(out_base, 'labels.csv')
+        label_df.to_csv(label_csv_path, index=False)
+        print(f"Label mapping saved to {label_csv_path}")
+        print(f"Total files processed: {len(successful_results)}")
+        print(f"Seizure files: {sum(1 for _, label in successful_results if label == 1)}")
+        print(f"Background files: {sum(1 for _, label in successful_results if label == 0)}")
+    
+    return successful_results
+
 
 
 
@@ -220,4 +286,4 @@ if __name__ == "__main__":
                         help="Output base directory for clips")
     parser.add_argument("--n_jobs", type=int, default=10)
     args = parser.parse_args()
-    res = generate_clips(args.raw_base, args.out_base, args.n_jobs)
+    results = generate_clips(args.raw_base, args.out_base, args.n_jobs)
