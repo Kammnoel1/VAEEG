@@ -46,6 +46,39 @@ def parse_label_file(edf_path):
         return 0  # Default to background if parsing fails
 
 
+def parse_seizure_intervals(edf_path):
+    """
+    Parse the corresponding .csv_bi file to extract seizure time intervals.
+    
+    Args:
+        edf_path: Path to the EDF file
+        
+    Returns:
+        list: List of (start_time, stop_time) tuples for seizure periods in seconds
+    """
+    # Construct the corresponding .csv_bi file path
+    csv_bi_path = edf_path.replace('.edf', '.csv_bi')
+    
+    if not os.path.exists(csv_bi_path):
+        return []  # No seizure intervals if no label file
+    
+    try:
+        # Read the CSV file, skipping comment lines that start with #
+        df = pd.read_csv(csv_bi_path, comment='#')
+        
+        # Extract seizure rows
+        seizure_rows = df[df['label'] == 'seiz']
+        
+        # Return list of (start_time, stop_time) tuples
+        intervals = [(row['start_time'], row['stop_time']) for _, row in seizure_rows.iterrows()]
+        
+        return intervals
+        
+    except Exception as e:
+        print(f"Error parsing seizure intervals from {csv_bi_path}: {e}")
+        return []
+
+
 class DataGen:
     _SFREQ = 256.0
     max_clips = 500
@@ -141,6 +174,109 @@ class DataGen:
     def _filter_intervalset(input_set, threshold):
         return [iv for iv in input_set if iv.upper_bound - iv.lower_bound > threshold]
 
+    def get_seizure_regions(self, seizure_intervals, seg_len=5.0, amp_threshold=400, merge_len=1.0):
+        """
+        Extract segments only from seizure time periods.
+        
+        Args:
+            seizure_intervals: List of (start_time, stop_time) tuples in seconds
+            seg_len: Length of each segment in seconds
+            amp_threshold: Amplitude threshold for artifact rejection (uV)
+            merge_len: Merge length for artifact detection (seconds)
+            
+        Returns:
+            str or None: Path to saved .npy file if successful, None otherwise
+        """
+        if not seizure_intervals:
+            print(f"No seizure intervals found for {self.in_file}")
+            return None
+            
+        seg_samples = int(seg_len * self._SFREQ)  # Convert to samples
+        m_threshold = int(merge_len * self._SFREQ)
+        
+        # Stack frequency band data
+        udata = np.stack([self.data["whole"],
+                          self.data["delta"],
+                          self.data["theta"],
+                          self.data["alpha"],
+                          self.data["low_beta"],
+                          self.data["high_beta"]], axis=0) * 1.0e6
+        
+        # Extract segments from seizure intervals only
+        seizure_segments = []
+        total_data_samples = udata.shape[2]  # Total samples in recording
+        
+        print(f"Processing {len(seizure_intervals)} seizure intervals from {self.in_file}")
+        
+        for i, (start_time, end_time) in enumerate(seizure_intervals):
+            # Convert time to sample indices
+            start_sample = int(start_time * self._SFREQ)
+            end_sample = int(end_time * self._SFREQ)
+            
+            # Ensure we don't exceed data bounds
+            start_sample = max(0, start_sample)
+            end_sample = min(total_data_samples, end_sample)
+            
+            interval_duration = (end_sample - start_sample) / self._SFREQ
+            print(f"  Seizure interval {i+1}: {start_time:.2f}s - {end_time:.2f}s ({interval_duration:.2f}s)")
+            
+            # Apply artifact rejection within this seizure interval
+            interval_data = udata[:, :, start_sample:end_sample]
+            flag = np.abs(interval_data[0]) > amp_threshold  # Use whole band for artifact detection
+            art = lui.find_continuous_area_2d(flag)
+            
+            if art:
+                c_art = [lui.merge_continuous_area(s, threshold=m_threshold) for s in art]
+                
+                # Create clean regions within this seizure interval
+                interval_length = end_sample - start_sample
+                whole_interval = lui.IntervalSet([lui.Interval(lower_bound=0, upper_bound=interval_length)])
+                c_clean = [whole_interval.difference(s) for s in c_art]
+                keep_clean = [self._filter_intervalset(s, seg_samples) for s in c_clean]
+            else:
+                # No artifacts detected, use entire interval
+                interval_length = end_sample - start_sample
+                keep_clean = [lui.IntervalSet([lui.Interval(lower_bound=0, upper_bound=interval_length)])]
+            
+            # Extract segments from clean regions
+            segments_from_interval = 0
+            for ch_idx, item_set in enumerate(keep_clean):
+                for item in item_set:
+                    # Extract complete segments from this clean region
+                    current_pos = item.lower_bound
+                    while current_pos + seg_samples <= item.upper_bound:
+                        # Convert back to absolute sample indices
+                        abs_start = start_sample + current_pos
+                        abs_end = abs_start + seg_samples
+                        
+                        # Extract segment from all frequency bands
+                        segment = udata[:, ch_idx, abs_start:abs_end]
+                        seizure_segments.append(segment)
+                        segments_from_interval += 1
+                        
+                        current_pos += seg_samples
+            
+            print(f"    Extracted {segments_from_interval} clean segments from this interval")
+        
+        # Only proceed if we have enough segments
+        if len(seizure_segments) >= 200:
+            # Limit to max_clips if specified
+            if len(seizure_segments) > self.max_clips:
+                seizure_segments = random.sample(seizure_segments, self.max_clips)
+            
+            # Stack all segments
+            outputs = np.stack(seizure_segments, axis=0)
+            
+            # Save to file
+            out_file = os.path.join(self.out_dir, "%s.npy" % self.out_prefix)
+            np.save(out_file, outputs)
+            
+            print(f"Saved {len(seizure_segments)} seizure segments to {out_file}")
+            return out_file
+        else:
+            print(f"Not enough clean seizure segments ({len(seizure_segments)} < 200) for {self.in_file}")
+            return None
+
     def get_regions(self, seg_len=5.0, amp_threshold=400, merge_len=1.0, drop=60.0):
         """
         :param seg_len: unit s, keep > seg_len
@@ -210,7 +346,14 @@ def worker(in_file, out_dir, out_prefix, ch_mapper=None):
         label = parse_label_file(in_file)
         
         dg = DataGen(in_file, out_dir, out_prefix, ch_mapper)
-        out_file = dg.get_regions()
+        
+        if label == 1:  # Has seizure activity
+            # Extract seizure intervals and use seizure-aware processing
+            seizure_intervals = parse_seizure_intervals(in_file)
+            out_file = dg.get_seizure_regions(seizure_intervals)
+        else:  # Background only
+            # Use existing background processing
+            out_file = dg.get_regions()
         
         # Only return the result if the .npy file was actually created
         npy_path = os.path.join(out_dir, f"{out_prefix}.npy")
@@ -269,8 +412,12 @@ def generate_clips(base_dir, out_base, n_jobs):
         label_df.to_csv(label_csv_path, index=False)
         print(f"Label mapping saved to {label_csv_path}")
         print(f"Total files processed: {len(successful_results)}")
-        print(f"Seizure files: {sum(1 for _, label in successful_results if label == 1)}")
-        print(f"Background files: {sum(1 for _, label in successful_results if label == 0)}")
+        
+        seizure_count = sum(1 for _, label in successful_results if label == 1)
+        background_count = sum(1 for _, label in successful_results if label == 0)
+        print(f"Seizure files (seizure-timestamped segments only): {seizure_count}")
+        print(f"Background files (full recording): {background_count}")
+        print("Note: Seizure files now contain only segments from seizure-timestamped periods")
     
     return successful_results
 
