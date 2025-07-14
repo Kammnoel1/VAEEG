@@ -3,7 +3,9 @@ import gc
 import os
 import random
 import glob
+import math 
 from joblib import Parallel, delayed
+
 
 import mne
 import numpy as np
@@ -174,124 +176,49 @@ class DataGen:
     def _filter_intervalset(input_set, threshold):
         return [iv for iv in input_set if iv.upper_bound - iv.lower_bound > threshold]
 
-    def get_seizure_regions(self, seizure_intervals, seg_len=5.0, amp_threshold=400, merge_len=1.0):
-        """
-        Extract segments only from seizure time periods.
-        
-        Args:
-            seizure_intervals: List of (start_time, stop_time) tuples in seconds
-            seg_len: Length of each segment in seconds
-            amp_threshold: Amplitude threshold for artifact rejection (uV)
-            merge_len: Merge length for artifact detection (seconds)
-            
-        Returns:
-            str or None: Path to saved .npy file if successful, None otherwise
-        """
-        if not seizure_intervals:
-            print(f"No seizure intervals found for {self.in_file}")
-            return None
-            
-        seg_samples = int(seg_len * self._SFREQ)  # Convert to samples
-        m_threshold = int(merge_len * self._SFREQ)
-        
-        # Stack frequency band data
-        udata = np.stack([self.data["whole"],
-                          self.data["delta"],
-                          self.data["theta"],
-                          self.data["alpha"],
-                          self.data["low_beta"],
-                          self.data["high_beta"]], axis=0) * 1.0e6
-        
-        # Extract segments from seizure intervals only
-        seizure_segments = []
-        total_data_samples = udata.shape[2]  # Total samples in recording
-        
-        print(f"Processing {len(seizure_intervals)} seizure intervals from {self.in_file}")
-        
-        for i, (start_time, end_time) in enumerate(seizure_intervals):
-            # Convert time to sample indices
-            start_sample = int(start_time * self._SFREQ)
-            end_sample = int(end_time * self._SFREQ)
-            
-            # Ensure we don't exceed data bounds
-            start_sample = max(0, start_sample)
-            end_sample = min(total_data_samples, end_sample)
-            
-            interval_duration = (end_sample - start_sample) / self._SFREQ
-            print(f"  Seizure interval {i+1}: {start_time:.2f}s - {end_time:.2f}s ({interval_duration:.2f}s)")
-            
-            # Apply artifact rejection within this seizure interval
-            interval_data = udata[:, :, start_sample:end_sample]
-            flag = np.abs(interval_data[0]) > amp_threshold  # Use whole band for artifact detection
-            art = lui.find_continuous_area_2d(flag)
-            
-            if art:
-                c_art = [lui.merge_continuous_area(s, threshold=m_threshold) for s in art]
-                
-                # Create clean regions within this seizure interval
-                interval_length = end_sample - start_sample
-                whole_interval = lui.IntervalSet([lui.Interval(lower_bound=0, upper_bound=interval_length)])
-                c_clean = [whole_interval.difference(s) for s in c_art]
-                keep_clean = [self._filter_intervalset(s, seg_samples) for s in c_clean]
-            else:
-                # No artifacts detected, use entire interval
-                interval_length = end_sample - start_sample
-                keep_clean = [lui.IntervalSet([lui.Interval(lower_bound=0, upper_bound=interval_length)])]
-            
-            # Extract segments from clean regions
-            segments_from_interval = 0
-            for ch_idx, item_set in enumerate(keep_clean):
-                for item in item_set:
-                    # Extract complete segments from this clean region
-                    current_pos = item.lower_bound
-                    while current_pos + seg_samples <= item.upper_bound:
-                        # Convert back to absolute sample indices
-                        abs_start = start_sample + current_pos
-                        abs_end = abs_start + seg_samples
-                        
-                        # Extract segment from all frequency bands
-                        segment = udata[:, ch_idx, abs_start:abs_end]
-                        seizure_segments.append(segment)
-                        segments_from_interval += 1
-                        
-                        current_pos += seg_samples
-            
-            print(f"    Extracted {segments_from_interval} clean segments from this interval")
-        
-        # Only proceed if we have enough segments
-        if len(seizure_segments) >= 200:
-            # Limit to max_clips if specified
-            if len(seizure_segments) > self.max_clips:
-                seizure_segments = random.sample(seizure_segments, self.max_clips)
-            
-            # Stack all segments
-            outputs = np.stack(seizure_segments, axis=0)
-            
-            # Save to file
-            out_file = os.path.join(self.out_dir, "%s.npy" % self.out_prefix)
-            np.save(out_file, outputs)
-            
-            print(f"Saved {len(seizure_segments)} seizure segments to {out_file}")
-            return out_file
-        else:
-            print(f"Not enough clean seizure segments ({len(seizure_segments)} < 200) for {self.in_file}")
-            return None
-
-    def get_regions(self, seg_len=5.0, amp_threshold=400, merge_len=1.0, drop=60.0):
+    def get_regions(self, seg_len=5.0, amp_threshold=400, merge_len=1.0, drop=60.0, seizure_intervals=None):
         """
         :param seg_len: unit s, keep > seg_len
         :param amp_threshold: unit uV, keep < amp_threshold
         :param merge_len: unit s
         :param drop: unit s, drop regions at the first and in the end.
+        :param seizure_intervals: list of (start_time, stop_time) tuples in seconds. If provided, only extract from these periods.
         :return:
         """
         data = self.data["whole"]
         m_threshold = int(merge_len * self._SFREQ)
         seg_threshold = int(seg_len * self._SFREQ)
-        start = int(drop * self._SFREQ)
-        end = data.shape[1] - int(drop * self._SFREQ)
-
-        whole_r = lui.IntervalSet([lui.Interval(lower_bound=start, upper_bound=end)])
+        
+        # If seizure intervals are provided, create seizure-only regions instead of using drop
+        if seizure_intervals is not None:
+            print(f"Processing {len(seizure_intervals)} seizure intervals from {self.in_file}")
+            # Convert seizure intervals to sample indices and create IntervalSet
+            seizure_regions = []
+            total_data_samples = data.shape[1]
+            
+            for i, (start_time, end_time) in enumerate(seizure_intervals):
+                start_sample = int(math.ceil(start_time * self._SFREQ))
+                end_sample = int(math.floor(end_time * self._SFREQ))
+                
+                # Ensure we don't exceed data bounds
+                start_sample = max(0, start_sample)
+                end_sample = min(total_data_samples, end_sample)
+                
+                if end_sample > start_sample:
+                    seizure_regions.append(lui.Interval(lower_bound=start_sample, upper_bound=end_sample))
+                    interval_duration = (end_sample - start_sample) / self._SFREQ
+                    print(f"  Seizure interval {i+1}: {start_time:.2f}s - {end_time:.2f}s ({interval_duration:.2f}s)")
+            
+            if not seizure_regions:
+                print(f"No valid seizure intervals found for {self.in_file}")
+                return None
+                
+            whole_r = lui.IntervalSet(seizure_regions)
+        else:
+            # Use original drop-based approach for background data
+            start = int(drop * self._SFREQ)
+            end = data.shape[1] - int(drop * self._SFREQ)
+            whole_r = lui.IntervalSet([lui.Interval(lower_bound=start, upper_bound=end)])
 
         flag = np.abs(data) * 1e6 > amp_threshold
         art = lui.find_continuous_area_2d(flag)
@@ -334,6 +261,15 @@ class DataGen:
             outputs = np.stack(outputs, axis=0)
             out_file = os.path.join(self.out_dir, "%s.npy" % self.out_prefix)
             np.save(out_file, outputs)
+            
+            if seizure_intervals is not None:
+                print(f"Saved {len(ts)} seizure segments to {out_file}")
+            
+            return out_file
+        else:
+            if seizure_intervals is not None:
+                print(f"Not enough clean seizure segments ({len(ts)} < 200) for {self.in_file}")
+            return None
 
 def worker(in_file, out_dir, out_prefix, ch_mapper=None):
     """
@@ -348,9 +284,9 @@ def worker(in_file, out_dir, out_prefix, ch_mapper=None):
         dg = DataGen(in_file, out_dir, out_prefix, ch_mapper)
         
         if label == 1:  # Has seizure activity
-            # Extract seizure intervals and use seizure-aware processing
+            # Extract seizure intervals and pass them to get_regions
             seizure_intervals = parse_seizure_intervals(in_file)
-            out_file = dg.get_seizure_regions(seizure_intervals)
+            out_file = dg.get_regions(seizure_intervals=seizure_intervals)
         else:  # Background only
             # Use existing background processing
             out_file = dg.get_regions()
@@ -417,7 +353,7 @@ def generate_clips(base_dir, out_base, n_jobs):
         background_count = sum(1 for _, label in successful_results if label == 0)
         print(f"Seizure files (seizure-timestamped segments only): {seizure_count}")
         print(f"Background files (full recording): {background_count}")
-        print("Note: Seizure files now contain only segments from seizure-timestamped periods")
+        print("Note: Seizure files contain only segments from seizure-timestamped periods")
     
     return successful_results
 
