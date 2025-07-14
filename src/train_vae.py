@@ -67,6 +67,12 @@ class Estimator(object):
         return r
 
     def train(self, input_loader, model_dir, n_epoch, lr, beta, n_print):
+        """
+        Train the VAE model.
+        
+        Note: When beta=0, the model operates in pure autoencoder mode
+        without KL divergence regularization to avoid numerical instabilities.
+        """
         summary_dir = os.path.join(model_dir, "save")
         if not os.path.isdir(summary_dir):
             os.makedirs(summary_dir)
@@ -99,9 +105,16 @@ class Estimator(object):
                 input_x = input_x.to(self.device, non_blocking=True)
                 mu, log_var, xbar = self.model(input_x)
 
-                kld = kl_loss(mu, log_var)
                 rec = recon_loss(input_x, xbar)
-                loss = beta * kld + rec
+                
+                # Skip KL computation when beta=0 to avoid numerical issues
+                if beta > 0:
+                    kld = kl_loss(mu, log_var)
+                    loss = beta * kld + rec
+                else:
+                    # Pure autoencoder mode - no KL divergence penalty
+                    kld = torch.tensor(0.0, device=self.device)
+                    loss = rec
 
                 optimizer.zero_grad()
                 loss.backward()
@@ -198,6 +211,7 @@ def run_training(yaml_file: str, z_dim: int, band_name: str):
         z_dim=model_params["z_dim"],
         negative_slope=model_params["negative_slope"],
         decoder_last_lstm=model_params["decoder_last_lstm"],
+        deterministic=model_params.get("deterministic", False),
     )
     est = Estimator(
         in_model=model,

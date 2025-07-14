@@ -102,14 +102,15 @@ class Decoder(nn.Module):
 
 
 class VAEEG(nn.Module):
-    def __init__(self, in_channels, z_dim, negative_slope=0.2, decoder_last_lstm=True):
+    def __init__(self, in_channels, z_dim, negative_slope=0.2, decoder_last_lstm=True, deterministic=False):
         super(VAEEG, self).__init__()
         self.encoder = Encoder(in_channels=in_channels, z_dim=z_dim, negative_slope=negative_slope)
         self.decoder = Decoder(z_dim=z_dim, negative_slope=negative_slope, last_lstm=decoder_last_lstm)
+        self.deterministic = deterministic
 
     def forward(self, x):
         mu, log_var = self.encoder(x)
-        z = re_parameterize(mu, log_var)
+        z = re_parameterize(mu, log_var, deterministic=self.deterministic)
         xbar = self.decoder(z)
 
         return mu, log_var, xbar

@@ -87,7 +87,7 @@ def main():
     parser.add_argument(
         "--output_dir",
         type=str,
-        default="/u/noka/VAEEG/figs/norm",
+        default="/u/noka/VAEEG/figs/norm/test",
         help="Directory to save histogram plots (default: /u/noka/VAEEG/figs)"
     )
     parser.add_argument(

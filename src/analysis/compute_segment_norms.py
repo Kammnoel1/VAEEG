@@ -44,15 +44,6 @@ def compute_segment_norms(data_path, labels_path, band_name, output_dir):
     # Save as bundle for convenience
     bundle_path = os.path.join(output_dir, f"{band_name}_segment_norms_{split}_with_labels.npz")
     np.savez(bundle_path, norms=segment_norms, labels=labels)
-    
-    # Print basic statistics
-    seizure_norms = segment_norms[labels == 1]
-    background_norms = segment_norms[labels == 0]
-    
-    print(f"\nStatistics for {band_name} band ({split} set):")
-    print(f"Seizure segments - Mean norm: {np.mean(seizure_norms):.4f}, Std: {np.std(seizure_norms):.4f}")
-    print(f"Background segments - Mean norm: {np.mean(background_norms):.4f}, Std: {np.std(background_norms):.4f}")
-    print(f"Ratio (Seizure/Background): {np.mean(seizure_norms)/np.mean(background_norms):.4f}")
 
 
 def main():

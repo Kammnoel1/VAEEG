@@ -11,7 +11,7 @@ Train:
   # Learning rate for the optimizer
   lr: 0.001
   # Weight factor for the KL divergence term
-  beta: 4.0
+  beta: 0.0
   # Frequency (in steps) at which to log training info
   n_print: 100
 
@@ -23,6 +23,8 @@ Model:
   negative_slope: 0.2
   # Whether the decoder uses a final LSTM layer (set to false if not desired)
   decoder_last_lstm: false
+  # Whether to use deterministic mode (no variance in latent sampling)
+  deterministic: false
 
 # Dataset: Parameters for the dataset.
 DataSet: 

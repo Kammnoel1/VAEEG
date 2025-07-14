@@ -28,7 +28,7 @@ file_path = os.path.join(channel_folder, f"{band}.npy")
 latest_ckpt = "./models/config_z50/ckpt_epoch_5.ckpt"
 print("Loading checkpoint:", latest_ckpt)
 
-model = VAEEG(in_channels=1, z_dim=z_dim, negative_slope=0.2, decoder_last_lstm=False)
+model = VAEEG(in_channels=1, z_dim=z_dim, negative_slope=0.2, decoder_last_lstm=False, deterministic=False)
 load_model(model, latest_ckpt)
 model.to(device)
 model.eval()

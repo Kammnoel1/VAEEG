@@ -64,8 +64,14 @@ def main():
         help="Path to the .npz file containing 'embedding' (n×2) and 'labels' (n,)"
     )
     parser.add_argument(
+        "--band",
+        required=True,
+        type=str,
+        help="Band name for the t-SNE plot"
+    )   
+    parser.add_argument(
         "--out_folder",
-        default="/u/noka/VAEEG/figs",
+        default="/u/noka/VAEEG/figs/tsne/test",
         type=str,
         help="Directory where the plot image will be saved"
     )

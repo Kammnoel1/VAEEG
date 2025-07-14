@@ -23,6 +23,8 @@ def plot_umap(umap_array, labels, out_folder, out_name="umap_plot.png"):
     if umap_array.ndim != 2 or umap_array.shape[1] != 2:
         raise ValueError(f"Expected array of shape (n_samples, 2), got {umap_array.shape}")
     if labels.shape[0] != umap_array.shape[0]:
+        print(labels.shape[0])
+        print(umap_array.shape[0])
         raise ValueError("Labels length must match number of points")
 
     x = umap_array[:, 0]

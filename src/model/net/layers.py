@@ -147,14 +147,19 @@ class ResBlockV1(nn.Module):
         return out
 
 
-def re_parameterize(mu, log_var):
+def re_parameterize(mu, log_var, deterministic=False):
     """
     Re-parameterize trick to sample from N(mu, var) from N(0,1).
+    If deterministic is True, returns only the mean (mu) without sampling.
 
     :param mu: (Tensor) Mean of the latent Gaussian [N, z_dims]
     :param log_var: (Tensor) Standard deviation of the latent Gaussian [N, z_dims]
+    :param deterministic: (bool) If True, returns only mu (no variance)
     :return: (Tensor) [N, z_dims]
     """
+    if deterministic:
+        return mu
+    
     std = torch.exp(0.5 * log_var)
     eps = torch.randn_like(std)
     return mu + eps * std

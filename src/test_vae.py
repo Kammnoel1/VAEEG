@@ -74,7 +74,8 @@ if __name__ == '__main__':
         in_channels=model_params['in_channels'],
         z_dim=model_params['z_dim'],
         negative_slope=model_params['negative_slope'],
-        decoder_last_lstm=model_params['decoder_last_lstm']
+        decoder_last_lstm=model_params['decoder_last_lstm'],
+        deterministic=model_params.get('deterministic', False)
     )
     model, aux, device = init_model(model, n_gpus=train_params["n_gpus"], ckpt_file=ckpt_file)
 

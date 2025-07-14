@@ -18,11 +18,13 @@ def get_sampled_latent(model, loader, device, z_dim):
     z_arr = np.zeros((num_samples, z_dim), dtype=np.float32)  
     idx = 0
     encoder = model.module.encoder if hasattr(model, 'module') else model.encoder
+    # Get the deterministic setting from the model
+    deterministic = model.module.deterministic if hasattr(model, 'module') else model.deterministic
     with torch.no_grad():
         for x in loader:
             x = x.to(device)
             mu, log_var = encoder(x)
-            z_batch = re_parameterize(mu, log_var)
+            z_batch = re_parameterize(mu, log_var, deterministic=deterministic)
             bs = z_batch.size(0)
             z_arr[idx:idx + bs, :] = z_batch.cpu().numpy()
             idx += bs
@@ -54,7 +56,8 @@ if __name__ == '__main__':
         in_channels=model_params['in_channels'],
         z_dim=model_params['z_dim'],
         negative_slope=model_params['negative_slope'],
-        decoder_last_lstm=model_params['decoder_last_lstm']
+        decoder_last_lstm=model_params['decoder_last_lstm'],
+        deterministic=model_params.get('deterministic', False)
     )
     model, aux, device = init_model(model, n_gpus=train_params["n_gpus"], ckpt_file=ckpt_file)
 
