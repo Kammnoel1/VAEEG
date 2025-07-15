@@ -99,7 +99,9 @@ class Estimator(object):
             print(f"Dataset has {dataset_len} samples, {num_batches} batches (batch_size={input_loader.batch_size})")
         for ie in range(n_epoch):
             current_epoch = current_epoch + 1
-            input_loader.sampler.set_epoch(current_epoch)
+            # Set epoch for distributed sampler if it exists
+            if hasattr(input_loader.sampler, 'set_epoch'):
+                input_loader.sampler.set_epoch(current_epoch)
             for idx, input_x in enumerate(input_loader, 0):
                 current_step = current_step + 1
                 input_x = input_x.to(self.device, non_blocking=True)
@@ -225,19 +227,30 @@ def run_training(yaml_file: str, z_dim: int, band_name: str):
         clip_len=dataset_params["clip_len"],
     )
 
-    sampler = DistributedSampler(
-        ds,
-        num_replicas=dist.get_world_size(),
-        rank=dist.get_rank(),
-        shuffle=True,
-    )
+    # Use distributed training only when multiple GPUs are available and distributed is initialized
+    n_gpu = min(max(train_params["n_gpus"], 0), torch.cuda.device_count())
+    use_distributed = n_gpu > 1 and dist.is_initialized()
+    
+    if use_distributed:
+        sampler = DistributedSampler(
+            ds,
+            num_replicas=dist.get_world_size(),
+            rank=dist.get_rank(),
+            shuffle=True,
+        )
+        batch_size = dataset_params["batch_size"] // dist.get_world_size()
+    else:
+        sampler = None
+        batch_size = dataset_params["batch_size"]
+    
     loader = torch.utils.data.DataLoader(
-    ds,
-    sampler=sampler,
-    batch_size=dataset_params["batch_size"] // dist.get_world_size(),
-    num_workers=dataset_params["num_workers"],
-    pin_memory=True,
-    persistent_workers=True,
+        ds,
+        sampler=sampler,
+        batch_size=batch_size,
+        num_workers=dataset_params["num_workers"],
+        pin_memory=True,
+        persistent_workers=True,
+        shuffle=sampler is None,  # Only shuffle when not using distributed sampler
     )
 
     est.train(

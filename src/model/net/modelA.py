@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from .layers import (HeadLayer, Conv1dLayer, FConv1dLayer,
+from .layers import (HeadLayer, FHeadLayer, Conv1dLayer, FConv1dLayer,
                      ResBlockV1, LSTMLayer, re_parameterize, z_sample)
 
 
@@ -42,16 +42,16 @@ class Encoder(nn.Module):
 
 
 class Decoder(nn.Module):
-    def __init__(self, z_dim, negative_slope=0.2, last_lstm=True):
+    def __init__(self, z_dim, in_channels=1, negative_slope=0.2, last_lstm=True):
         super(Decoder, self).__init__()
         # (N, 256) to (N, 32, 8)
         self.fc = nn.Sequential(nn.Linear(z_dim, 256),
                                 nn.BatchNorm1d(256),
                                 nn.LeakyReLU(negative_slope))
 
-        in_features = [32, 32, 24, 16, 16]
-        out_features = [32, 24, 16, 16, 8]
-        n_blocks = [2, 2, 2, 2, 2]
+        in_features = [32, 32, 24, 16]
+        out_features = [32, 24, 16, 16]
+        n_blocks = [2, 2, 2, 2]
 
         self.layers = nn.ModuleList()
 
@@ -68,11 +68,7 @@ class Decoder(nn.Module):
         if last_lstm:
             self.tail = LSTMLayer(out_features[-1], 1, 2)
         else:
-            # self.tail = Conv1dLayer(out_features[-1], 1, 1, 1, bias=True)
-            self.tail = nn.Sequential(Conv1dLayer(out_features[-1], out_features[-1] // 2, 5, 1, bias=True),
-                                      nn.BatchNorm1d(out_features[-1] // 2),
-                                      nn.LeakyReLU(negative_slope),
-                                      Conv1dLayer(out_features[-1] // 2, 1, 3, 1, bias=True))
+            self.tail = FHeadLayer(in_channels=16, out_channels=in_channels, negative_slope=negative_slope)
 
         self.last_lstm = last_lstm
 
@@ -105,7 +101,7 @@ class VAEEG(nn.Module):
     def __init__(self, in_channels, z_dim, negative_slope=0.2, decoder_last_lstm=True, deterministic=False):
         super(VAEEG, self).__init__()
         self.encoder = Encoder(in_channels=in_channels, z_dim=z_dim, negative_slope=negative_slope)
-        self.decoder = Decoder(z_dim=z_dim, negative_slope=negative_slope, last_lstm=decoder_last_lstm)
+        self.decoder = Decoder(z_dim=z_dim, in_channels=in_channels, negative_slope=negative_slope, last_lstm=decoder_last_lstm)
         self.deterministic = deterministic
 
     def forward(self, x):

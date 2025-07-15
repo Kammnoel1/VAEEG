@@ -22,3 +22,5 @@ src/temp_scripts/
 # Ignore test file 
 test.py
 src/test.py
+# Ignore yaml files 
+*.yaml

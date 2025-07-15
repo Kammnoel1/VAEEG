@@ -115,6 +115,68 @@ class HeadLayer(nn.Module):
         return out
 
 
+class FHeadLayer(nn.Module):
+    """
+    Inverse of HeadLayer. Transforms input from (N, 16, T/2) back to (N, in_channels, T).
+    First upsamples the temporal dimension by 2, then splits into 4 paths and processes
+    them with different kernel sizes before combining.
+    """
+
+    def __init__(self, in_channels, out_channels, negative_slope=0.2):
+        super(FHeadLayer, self).__init__()
+
+        if in_channels % 4 != 0:
+            raise ValueError("in_channels must be divisible by 4, but got: %d" % in_channels)
+
+        unit = in_channels // 4
+
+        # First transpose convolution to upsample temporal dimension by 2
+        self.fconv1 = nn.Sequential(FConv1dLayer(in_channels=in_channels, out_channels=in_channels,
+                                                kernel_size=3, stride=2, bias=False),
+                                   nn.BatchNorm1d(in_channels),
+                                   nn.LeakyReLU(negative_slope))
+
+        # Four parallel transpose convolutions with different kernel sizes
+        self.fconv2 = nn.Sequential(FConv1dLayer(in_channels=unit, out_channels=out_channels,
+                                                kernel_size=11, stride=1, bias=False),
+                                   nn.BatchNorm1d(out_channels),
+                                   nn.LeakyReLU(negative_slope))
+
+        self.fconv3 = nn.Sequential(FConv1dLayer(in_channels=unit, out_channels=out_channels,
+                                                kernel_size=9, stride=1, bias=False),
+                                   nn.BatchNorm1d(out_channels),
+                                   nn.LeakyReLU(negative_slope))
+
+        self.fconv4 = nn.Sequential(FConv1dLayer(in_channels=unit, out_channels=out_channels,
+                                                kernel_size=7, stride=1, bias=False),
+                                   nn.BatchNorm1d(out_channels),
+                                   nn.LeakyReLU(negative_slope))
+
+        self.fconv5 = nn.Sequential(FConv1dLayer(in_channels=unit, out_channels=out_channels,
+                                                kernel_size=5, stride=1, bias=False),
+                                   nn.BatchNorm1d(out_channels),
+                                   nn.LeakyReLU(negative_slope))
+
+    def forward(self, x):
+        # First upsample the temporal dimension
+        x = self.fconv1(x)
+        
+        # Split into 4 equal parts along the channel dimension
+        unit = x.size(1) // 4
+        x1, x2, x3, x4 = x.split(unit, dim=1)
+        
+        # Process each part with different kernel sizes
+        out1 = self.fconv2(x1)
+        out2 = self.fconv3(x2)
+        out3 = self.fconv4(x3)
+        out4 = self.fconv5(x4)
+        
+        # Average the outputs (could also sum or use other combination methods)
+        out = (out1 + out2 + out3 + out4) / 4.0
+        
+        return out
+
+
 class ResBlockV1(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, stride, negative_slope=0.2):
         super(ResBlockV1, self).__init__()
