@@ -302,13 +302,19 @@ def worker(in_file, out_dir, out_prefix, ch_mapper=None):
         return (None, None)
 
 
-def generate_clips(base_dir, out_base, n_jobs):
+def generate_clips(base_dir, out_base, n_jobs, labels_csv_path=None):
     """
     Discover all EDFs under each subdirectory of base_dir,
     and generate clips for each into a single out_base directory.
 
     All .npy files (one per EDF) will be placed directly in out_base.
     Also creates a CSV file mapping each .npy file to its label.
+    
+    Args:
+        base_dir: Root directory containing EDFs organized by split
+        out_base: Output base directory for clips
+        n_jobs: Number of parallel jobs
+        labels_csv_path: Path where to save the labels.csv file. If None, saves to out_base/labels.csv
     """
     # find all EDF files under base_dir/<any_split>/...
     splits = [d for d in os.listdir(base_dir)
@@ -344,7 +350,11 @@ def generate_clips(base_dir, out_base, n_jobs):
         
         # Save to CSV
         label_df = pd.DataFrame(label_data)
-        label_csv_path = os.path.join(out_base, 'labels.csv')
+        if labels_csv_path is None:
+            label_csv_path = os.path.join(out_base, 'labels.csv')
+        else:
+            # Ensure the directory exists
+            os.makedirs(os.path.dirname(labels_csv_path), exist_ok=True)
         label_df.to_csv(label_csv_path, index=False)
         print(f"Label mapping saved to {label_csv_path}")
         print(f"Total files processed: {len(successful_results)}")
@@ -367,6 +377,8 @@ if __name__ == "__main__":
                         help="Root directory containing EDFs organized by split")
     parser.add_argument("--out_base", required=True,
                         help="Output base directory for clips")
+    parser.add_argument("--labels_csv_path", 
+                        help="Path where to save the labels.csv file (default: <out_base>/labels.csv)")
     parser.add_argument("--n_jobs", type=int, default=10)
     args = parser.parse_args()
-    results = generate_clips(args.raw_base, args.out_base, args.n_jobs)
+    results = generate_clips(args.raw_base, args.out_base, args.n_jobs, args.labels_csv_path)

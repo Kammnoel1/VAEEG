@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 
-def plot_2d(pts, labels, out_folder, out_name="plot.png", title=None):
+def plot_2d(pts, labels, out_folder, band):
     os.makedirs(out_folder, exist_ok=True)
     if pts.ndim != 2 or pts.shape[1] != 2:
         raise ValueError(f"Expected (n,2), got {pts.shape}")
@@ -24,14 +24,12 @@ def plot_2d(pts, labels, out_folder, out_name="plot.png", title=None):
     handles, _ = sc.legend_elements()
     plt.legend(handles, ["background", "seizure"], title="label", loc="best")
 
-    if title:
-        plt.title(title)
     plt.xlabel("Component 1")
     plt.ylabel("Component 2")
     plt.grid(True)
     plt.tight_layout()
 
-    out_path = os.path.join(out_folder, out_name)
+    out_path = os.path.join(out_folder, band)
     plt.savefig(out_path, dpi=300)
     plt.close()
     print(f"Saved plot to: {out_path}")
@@ -45,25 +43,20 @@ def main():
     )
     p.add_argument(
         "--out_folder",
-        default="/u/noka/VAEEG/figs",
+        default="/u/noka/VAEEG/figs/pca/test",
         help="Directory to save the plot"
     )
     p.add_argument(
-        "--out_name",
-        default="pca.png",
+        "--band",
+        required=True,
         help="Filename for the saved plot"
-    )
-    p.add_argument(
-        "--title",
-        default=None,
-        help="Optional title for the plot"
     )
     args = p.parse_args()
 
     data = np.load(args.input_npz)
     embedding = data["embedding"]
     labels    = data["labels"]
-    plot_2d(embedding, labels, args.out_folder, args.out_name, title=args.title)
+    plot_2d(embedding, labels, args.out_folder, args.band)
 
 if __name__ == "__main__":
     main()

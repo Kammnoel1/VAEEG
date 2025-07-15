@@ -67,7 +67,7 @@ def main():
     )
     parser.add_argument(
         "--out_folder",
-        default="/u/noka/VAEEG/figs",
+        default="/u/noka/VAEEG/figs/umap/test",
         type=str,
         help="Directory where the plot image will be saved"
     )

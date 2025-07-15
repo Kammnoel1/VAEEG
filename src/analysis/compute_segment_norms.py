@@ -71,7 +71,7 @@ def main():
     parser.add_argument(
         "--output_dir",
         type=str,
-        default="/ptmp/noka/analysis/tusz/norms",
+        default="/ptmp/noka/analysis/norms/test",
         help="Directory to save computed norms (default: /ptmp/noka/analysis/tusz/norms)"
     )
     
