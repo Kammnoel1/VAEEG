@@ -83,7 +83,8 @@ def parse_seizure_intervals(edf_path):
 
 class DataGen:
     _SFREQ = 256.0
-    max_clips = 500
+    max_clips = 60
+    min_clips = 30 
     _l_trans_bandwidth = 0.1
     _h_trans_bandwidth = 0.1
 
@@ -116,10 +117,9 @@ class DataGen:
 
     @staticmethod
     def _check_channel_names(raw_obj, ch_mapper, verbose):
-        rc_1 = ['FP1', 'FP2', 'F3', 'F4', 'C3', 'C4', 'P3', 'P4', 'O1',
+        rc = ['FP1', 'FP2', 'F3', 'F4', 'C3', 'C4', 'P3', 'P4', 'O1',
                 'O2', 'F7', 'F8', 'T3', 'T4', 'T5', 'T6', 'FZ',
-                'CZ', 'PZ', 'A1', 'A2']
-        rc_2 = rc_1[:-2]
+                'CZ', 'PZ']
 
         if ch_mapper is None:
             mapper = {c: c.upper() for c in raw_obj.ch_names}
@@ -130,10 +130,8 @@ class DataGen:
 
         raw_obj.rename_channels(mapper, verbose=verbose)
         names = set(raw_obj.ch_names)
-        if set(rc_1).issubset(names):
-            raw_obj.pick(picks=rc_1)
-        elif set(rc_2).issubset(names):
-            raw_obj.pick(picks=rc_2)
+        if set(rc).issubset(names):
+            raw_obj.pick(picks=rc)
         else:
             raise RuntimeError("Channel Error")
 
@@ -227,16 +225,33 @@ class DataGen:
 
         keep_clean = [self._filter_intervalset(s, seg_threshold) for s in c_clean]
 
-        out = []
+        
+        # First, collect all potential time segments across all channels
+        time_segments = {}  # Dictionary to store {(start, stop): [channel_indices]}
+
         for idx, item_set in enumerate(keep_clean, 0):
             for item in item_set:
                 tmp = np.arange(item.lower_bound, item.upper_bound + 1, seg_threshold)
                 if len(tmp) > 1:
                     for idj in range(len(tmp) - 1):
-                        out.append([idx, self.ch_names[idx], tmp[idj], tmp[idj + 1]])
+                        segment_key = (tmp[idj], tmp[idj + 1])
+                        if segment_key not in time_segments:
+                            time_segments[segment_key] = []
+                        time_segments[segment_key].append(idx)
+        out = []
+        for (start, stop), channel_indices in time_segments.items():
+            out.append({
+                "idx_count": len(channel_indices), 
+                "clip_start": start,
+                "clip_stop": stop
+            })
 
-        df_clean = pd.DataFrame(out, columns=["idx", "ch_names", "clip_start", "clip_stop"])
-      
+        df_clean = pd.DataFrame(out)
+        if df_clean.empty:
+            raise ValueError("No segments found that meet the channel threshold criteria")
+        channel_threshold = 10  # Set your threshold here
+        df_clean = df_clean[df_clean['idx_count'] >= channel_threshold]
+
 
         udata = np.stack([self.data["whole"],
                           self.data["delta"],
@@ -245,17 +260,17 @@ class DataGen:
                           self.data["low_beta"],
                           self.data["high_beta"]], axis=0) * 1.0e6
 
-        ts = list(zip(df_clean.idx, df_clean.clip_start, df_clean.clip_stop))
+        ts = list(zip(df_clean.clip_start, df_clean.clip_stop))
 
-        # Only keep signal segments of which there are at least 200.
-        if len(ts) >= 200:
+        # Only keep signal segments of which there are at least 5 * self.min_clips s long.
+        if len(ts) >= self.min_clips:
             if len(ts) > self.max_clips:
                 ts = random.sample(ts, self.max_clips)
 
             outputs = []
             for p in ts:
-                idx, start, stop = p
-                tmp = udata[:, idx, start:stop]
+                start, stop = p
+                tmp = udata[:, :, start:stop]
                 outputs.append(tmp)
 
             outputs = np.stack(outputs, axis=0)
@@ -268,7 +283,7 @@ class DataGen:
             return out_file
         else:
             if seizure_intervals is not None:
-                print(f"Not enough clean seizure segments ({len(ts)} < 200) for {self.in_file}")
+                print(f"Not enough clean seizure segments ({len(ts)} < {self.min_clips}) for {self.in_file}")
             return None
 
 def worker(in_file, out_dir, out_prefix, ch_mapper=None):
