@@ -24,7 +24,10 @@ def get_sampled_latent(model, loader, device, z_dim):
         for x in loader:
             x = x.to(device)
             mu, log_var = encoder(x)
-            z_batch = re_parameterize(mu, log_var, deterministic=deterministic)
+            if deterministic:
+                z_batch = mu  # In deterministic mode, log_var is None, so just use mu
+            else:
+                z_batch = re_parameterize(mu, log_var, deterministic=deterministic)
             bs = z_batch.size(0)
             z_arr[idx:idx + bs, :] = z_batch.cpu().numpy()
             idx += bs

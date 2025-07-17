@@ -109,8 +109,8 @@ class Estimator(object):
 
                 rec = recon_loss(input_x, xbar)
                 
-                # Skip KL computation when beta=0 to avoid numerical issues
-                if beta > 0:
+                # Skip KL computation when beta=0 or when in deterministic mode (log_var is None)
+                if beta > 0 and log_var is not None:
                     kld = kl_loss(mu, log_var)
                     loss = beta * kld + rec
                 else:

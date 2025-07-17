@@ -6,8 +6,9 @@ from .layers import (HeadLayer, FHeadLayer, Conv1dLayer, FConv1dLayer,
 
 
 class Encoder(nn.Module):
-    def __init__(self, in_channels, z_dim, negative_slope=0.2):
+    def __init__(self, in_channels, z_dim, negative_slope=0.2, deterministic=False):
         super(Encoder, self).__init__()
+        self.deterministic = deterministic
         self.layers = nn.ModuleList([HeadLayer(in_channels=in_channels,
                                                out_channels=16,
                                                negative_slope=negative_slope)])
@@ -29,7 +30,9 @@ class Encoder(nn.Module):
                                          nn.LeakyReLU(negative_slope)))
 
         self.mu = nn.Linear(32, z_dim)
-        self.log_var = nn.Linear(32, z_dim)
+        # Only create log_var layer if not in deterministic mode
+        if not self.deterministic:
+            self.log_var = nn.Linear(32, z_dim)
 
     def forward(self, x):
         # x: (N, 1, L)
@@ -37,8 +40,12 @@ class Encoder(nn.Module):
             x = m(x)
 
         mu = self.mu(x)
-        log_var = self.log_var(x)
-        return mu, log_var
+        if self.deterministic:
+            # In deterministic mode, don't compute log_var to avoid unused parameters
+            return mu, None
+        else:
+            log_var = self.log_var(x)
+            return mu, log_var
 
 
 class Decoder(nn.Module):
@@ -100,13 +107,17 @@ class Decoder(nn.Module):
 class VAEEG(nn.Module):
     def __init__(self, in_channels, z_dim, negative_slope=0.2, decoder_last_lstm=True, deterministic=False):
         super(VAEEG, self).__init__()
-        self.encoder = Encoder(in_channels=in_channels, z_dim=z_dim, negative_slope=negative_slope)
+        self.encoder = Encoder(in_channels=in_channels, z_dim=z_dim, negative_slope=negative_slope, deterministic=deterministic)
         self.decoder = Decoder(z_dim=z_dim, in_channels=in_channels, negative_slope=negative_slope, last_lstm=decoder_last_lstm)
         self.deterministic = deterministic
 
     def forward(self, x):
         mu, log_var = self.encoder(x)
-        z = re_parameterize(mu, log_var, deterministic=self.deterministic)
+        if self.deterministic:
+            # In deterministic mode, just use mu directly
+            z = mu
+        else:
+            z = re_parameterize(mu, log_var, deterministic=self.deterministic)
         xbar = self.decoder(z)
 
         return mu, log_var, xbar
