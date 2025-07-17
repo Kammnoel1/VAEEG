@@ -6,7 +6,8 @@ import shutil
 import pandas as pd
 from tqdm import tqdm
 import numpy as np
-from src.lighten.utils.io import get_files
+from lighten.utils.io import get_files
+import time 
 
 
 def load_labels_csv(labels_csv_path):
@@ -40,22 +41,23 @@ def get_data_shape_and_count(input_paths):
     print("Analyzing data structure...")
     total_samples = 0
     n_bands = None
+    n_channels = None
     n_features = None
     
     # Process files one by one using memmap
     for file_path in tqdm(input_paths, desc="Analyzing files"):
         try:
-            # Use memmap to avoid loading into memory
             data = np.load(file_path, mmap_mode='r')
             if n_bands is None:
                 n_bands = data.shape[1]
-                n_features = data.shape[2]
+                n_channels = data.shape[2]
+                n_features = data.shape[3]
             total_samples += data.shape[0]
         except Exception as e:
             print(f"Warning: Could not read {file_path}: {e}")
             continue
-    
-    return total_samples, n_bands, n_features
+
+    return total_samples, n_bands, n_channels, n_features
 
 
 def merge_data_with_labels(input_paths, out_dir, labels_dir, label_map):
@@ -70,14 +72,12 @@ def merge_data_with_labels(input_paths, out_dir, labels_dir, label_map):
         labels_dir: Output directory for labels
         label_map: Dictionary mapping filenames to labels
     """
-    os.makedirs(out_dir, exist_ok=True)
-    os.makedirs(labels_dir, exist_ok=True)
     band_names = ["whole", "delta", "theta", "alpha", "low_beta", "high_beta"]
 
     # First pass: determine total data size
-    total_samples, n_bands, n_features = get_data_shape_and_count(input_paths)
-    print(f"Total samples: {total_samples}, Bands: {n_bands}, Features: {n_features}")
-    
+    total_samples, n_bands, n_channels, n_features = get_data_shape_and_count(input_paths)
+    print(f"Total samples: {total_samples}, Bands: {n_bands}, Channels: {n_channels}, Features: {n_features}")
+
     # Create temporary memmap files for each band
     temp_dir = os.path.join(out_dir, "temp_memmap")
     os.makedirs(temp_dir, exist_ok=True)
@@ -88,7 +88,7 @@ def merge_data_with_labels(input_paths, out_dir, labels_dir, label_map):
         temp_file = os.path.join(temp_dir, f"{name}_temp.dat")
         band_memmaps[name] = np.memmap(
             temp_file, dtype=np.float32, mode='w+', 
-            shape=(total_samples, n_features)
+            shape=(total_samples, n_channels, n_features)
         )
     
     # Create memmap for labels
@@ -114,27 +114,17 @@ def merge_data_with_labels(input_paths, out_dir, labels_dir, label_map):
             # Copy directly to memmap arrays (no intermediate concatenation)
             end_idx = current_idx + n_clips
             for j, name in enumerate(band_names):
-                band_memmaps[name][current_idx:end_idx] = file_data[:, j, :]
+                band_memmaps[name][current_idx:end_idx] = file_data[:, j, :, :]
             
             # Set labels for all clips in this file
             labels_memmap[current_idx:end_idx] = file_label
             
             current_idx = end_idx
-            
-            # Periodic flush to ensure data is written to disk
-            if current_idx % 50000 == 0:  # Flush every 50k samples
-                for memmap_array in band_memmaps.values():
-                    memmap_array.flush()
-                labels_memmap.flush()
+            del file_data
                 
         except Exception as e:
             print(f"Warning: Could not process {file_path}: {e}")
             continue
-    
-    # Final flush
-    for memmap_array in band_memmaps.values():
-        memmap_array.flush()
-    labels_memmap.flush()
     
     # Create shuffling indices
     print("Creating shuffling indices...")
@@ -145,12 +135,8 @@ def merge_data_with_labels(input_paths, out_dir, labels_dir, label_map):
     print("Shuffling and saving final arrays...")
     labels_shuffled = labels_memmap[indices]
     
-    # Save labels only once (not per frequency band)
-    # Since labels are identical across all frequency bands, we only save:
-    # - train_labels.npy in the labels directory
-    # - test_labels.npy in the labels directory
     split_name = os.path.basename(out_dir)  # 'train' or 'test'
-    labels_file = os.path.join(labels_dir, f"{split_name}_labels.npy")
+    labels_file = os.path.join(labels_dir, f"{split_name}.npy")
     np.save(labels_file, labels_shuffled)
     print(f"Saved labels: {labels_file} - Shape: {labels_shuffled.shape}")
     print(f"  - Seizure samples: {np.sum(labels_shuffled == 1)}")
@@ -378,7 +364,7 @@ if __name__ == "__main__":
         "--no_labels", action="store_true", help="Disable label tracking (for backward compatibility)"
     )
     args = parser.parse_args()
-
+    start_time = time.time()
     result = split_dataset(
         base_dir=args.base_dir,
         labels_dir=args.labels_dir,
@@ -387,4 +373,7 @@ if __name__ == "__main__":
         save_json=not args.no_json,
         track_labels=not args.no_labels,
     )
-    print("Output directories:", result)
+    end_time = time.time()
+    execution_time = end_time - start_time
+    print(f"Execution time: {execution_time:.4f} seconds")
+    
