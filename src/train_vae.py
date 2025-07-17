@@ -123,8 +123,6 @@ class Estimator(object):
                 optimizer.step()
 
                 if current_step % n_print == 0:
-                    writer.add_scalar("loss", loss, current_step)
-                    writer.add_scalar("kld_loss", kld, current_step)
                     writer.add_scalar("rec_loss", rec, current_step)
 
                     error = input_x - xbar
@@ -132,41 +130,76 @@ class Estimator(object):
                     writer.add_scalar("mae error", error, current_step)
 
                     pr = self.pearson_index(input_x, xbar)
-                    writer.add_scalar("pearsonr", pr.mean(), current_step)
+                    pr_mean = pr.mean(dim=0)
+                    writer.add_scalar("pearsonr", pr_mean.mean(), current_step)
+                    
+                    # Only add KLD and total loss if we're in VAE mode (not deterministic and beta > 0)
+                    if beta > 0 and log_var is not None:
+                        writer.add_scalar("loss", loss, current_step)
+                        writer.add_scalar("kld_loss", kld, current_step)
 
                     cycle_time = (time.time() - start_time) / n_print
 
-                    values = (
-                        current_epoch,
-                        current_step,
-                        cycle_time,
-                        loss.cpu().detach().numpy(),
-                        kld.cpu().detach().numpy(),
-                        rec.cpu().detach().numpy(),
-                        error.cpu().detach().numpy(),
-                        pr.mean().cpu().detach().numpy(),
-                    )
+                    # Conditionally build values and names based on whether we have KLD
+                    if beta > 0 and log_var is not None:
+                        values = (
+                            current_epoch,
+                            current_step,
+                            cycle_time,
+                            loss.cpu().detach().numpy(),
+                            kld.cpu().detach().numpy(),
+                            rec.cpu().detach().numpy(),
+                            error.cpu().detach().numpy(),
+                            pr.mean().cpu().detach().numpy(),
+                        )
 
-                    names = [
-                        "current_epoch",
-                        "current_step",
-                        "cycle_time",
-                        "loss",
-                        "kld_loss",
-                        "rec_loss",
-                        "error",
-                        "pr",
-                    ]
+                        names = [
+                            "current_epoch",
+                            "current_step",
+                            "cycle_time",
+                            "loss",
+                            "kld_loss",
+                            "rec_loss",
+                            "error",
+                            "pr",
+                        ]
 
-                    print(
-                        "[Epoch %d, Step %d]: (%.3f s / cycle])\n"
-                        "  loss: %.3f; kld_loss: %.3f; rec: %.3f;\n"
-                        "  mae error: %.3f; pr: %.3f.\n" % values
-                    )
+                        print(
+                            "[Epoch %d, Step %d]: (%.3f s / cycle])\n"
+                            "  loss: %.3f; kld_loss: %.3f; rec: %.3f;\n"
+                            "  mae error: %.3f; pr: %.3f.\n" % values
+                        )
+                    else:
+                        # Pure autoencoder mode - no KLD values
+                        values = (
+                            current_epoch,
+                            current_step,
+                            cycle_time,
+                            loss.cpu().detach().numpy(),  # This is just reconstruction loss
+                            rec.cpu().detach().numpy(),
+                            error.cpu().detach().numpy(),
+                            pr.mean().cpu().detach().numpy(),
+                        )
+
+                        names = [
+                            "current_epoch",
+                            "current_step",
+                            "cycle_time",
+                            "loss",
+                            "rec_loss",
+                            "error",
+                            "pr",
+                        ]
+
+                        print(
+                            "[Epoch %d, Step %d]: (%.3f s / cycle])\n"
+                            "  loss: %.3f; rec: %.3f;\n"
+                            "  mae error: %.3f; pr: %.3f.\n" % values
+                        )
 
                     img = batch_imgs(
-                        input_x.cpu().detach().numpy()[:, 0, :],
-                        xbar.cpu().detach().numpy()[:, 0, :],
+                        input_x.cpu().detach().numpy()[:, :, :],
+                        xbar.cpu().detach().numpy()[:, :, :],
                         256,
                         4,
                         2,
