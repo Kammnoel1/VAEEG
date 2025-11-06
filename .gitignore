@@ -24,3 +24,15 @@ test.py
 src/test.py
 # Ignore yaml files 
 *.yaml
+# Ignore pdf files 
+*.pdf
+# Ignore checkpoint files
+*.ckpt
+# Ignore csv files 
+*.csv
+# Ignore Tensorboard log files 
+events.out.tfevents.*
+# Ignore png files 
+*.png
+# Ignore jupyter files 
+*.ipynb

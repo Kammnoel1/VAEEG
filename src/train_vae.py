@@ -122,7 +122,7 @@ class Estimator(object):
                 loss.backward()
                 optimizer.step()
 
-                if current_step % n_print == 0:
+                if current_step % n_print == 0 and rank == 0:
                     writer.add_scalar("rec_loss", rec, current_step)
 
                     error = input_x - xbar
@@ -197,15 +197,15 @@ class Estimator(object):
                             "  mae error: %.3f; pr: %.3f.\n" % values
                         )
 
-                    img = batch_imgs(
-                        input_x.cpu().detach().numpy()[:, :, :],
-                        xbar.cpu().detach().numpy()[:, :, :],
-                        256,
-                        4,
-                        2,
-                        fig_size=(8, 5),
-                    )
-                    writer.add_image("signal", img, current_step, dataformats="HWC")
+                    # img = batch_imgs(
+                    #     input_x.cpu().detach().numpy()[:, 0, :],
+                    #     xbar.cpu().detach().numpy()[:, 0, :],
+                    #     256,
+                    #     4,
+                    #     2,
+                    #     fig_size=(8, 5)
+                    # )
+                    # writer.add_image("signal", img, current_step, dataformats="HWC")
                     start_time = time.time()
 
                     n_float = len(values) - 2

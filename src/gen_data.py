@@ -366,12 +366,12 @@ def generate_clips(base_dir, out_base, n_jobs, labels_csv_path=None):
         # Save to CSV
         label_df = pd.DataFrame(label_data)
         if labels_csv_path is None:
-            label_csv_path = os.path.join(out_base, 'labels.csv')
+            labels_csv_path = os.path.join(out_base, 'labels.csv')
         else:
             # Ensure the directory exists
             os.makedirs(os.path.dirname(labels_csv_path), exist_ok=True)
-        label_df.to_csv(label_csv_path, index=False)
-        print(f"Label mapping saved to {label_csv_path}")
+        label_df.to_csv(labels_csv_path, index=False)
+        print(f"Label mapping saved to {labels_csv_path}")
         print(f"Total files processed: {len(successful_results)}")
         
         seizure_count = sum(1 for _, label in successful_results if label == 1)
