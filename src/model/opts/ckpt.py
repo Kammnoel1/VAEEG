@@ -87,11 +87,15 @@ def init_model(m, n_gpus, ckpt_file=None):
         )
         torch.cuda.set_device(rank % torch.cuda.device_count())
         m.to(device)
+        
+        # Check if model is in deterministic mode to handle unused parameters
+        find_unused_params = getattr(m, 'deterministic', False)
+        
         wrapped = nn.parallel.DistributedDataParallel(
             m,
             device_ids=[torch.cuda.current_device()],
             output_device=torch.cuda.current_device(),
-            find_unused_parameters=False
+            find_unused_parameters=find_unused_params
         )
     else:
         wrapped = m

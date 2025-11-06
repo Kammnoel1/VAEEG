@@ -42,12 +42,19 @@ def get_signal_plots(input_y, output_y, sfreq, fig_size=(8, 5)):
 
 
 def batch_imgs(input_y, output_y, sfreq, num, n_row, fig_size=(8, 5)):
-    selected_indices = np.random.choice(input_y.shape[1], num, replace=False)
-    selected_input = input_y[0, selected_indices, :]
-    selected_output = output_y[0, selected_indices, :]
-    z = get_signal_plots(selected_input, selected_output, sfreq, fig_size)
+     
+    z = get_signal_plots(input_y[0:num, :], output_y[0:num, :], sfreq, fig_size)
     img = make_grid(torch.tensor(np.transpose(z, (0, 3, 1, 2))), nrow=n_row, pad_value=0, padding=4)
     a = img.numpy()
-
     # HWC
     return np.ascontiguousarray(np.transpose(a, (1, 2, 0)))
+    # else: 
+    #     selected_indices = np.random.choice(input_y.shape[1], num, replace=False)
+    #     selected_input = input_y[0, selected_indices, :]
+    #     selected_output = output_y[0, selected_indices, :]
+    #     z = get_signal_plots(selected_input, selected_output, sfreq, fig_size)
+    #     img = make_grid(torch.tensor(np.transpose(z, (0, 3, 1, 2))), nrow=n_row, pad_value=0, padding=4)
+    #     a = img.numpy()
+
+    #     # HWC
+    #     return np.ascontiguousarray(np.transpose(a, (1, 2, 0)))

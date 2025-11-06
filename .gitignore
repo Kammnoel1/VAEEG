@@ -19,6 +19,12 @@ src/temp_scripts/
 /tensorboard/
 # Ignore sbatch files 
 /sbatches/
+# Ignore analysis files 
+src/analysis/
+# Ignore classifier scripts
+src/classifier/
+# Ignore plotting scripts 
+src/plotting/
 # Ignore test file 
 test.py
 src/test.py
@@ -36,3 +42,5 @@ events.out.tfevents.*
 *.png
 # Ignore jupyter files 
 *.ipynb
+# Ignore jupyter notebook checkpoints
+.ipynb_checkpoints/
