@@ -61,8 +61,8 @@ git clone https://github.com/Kammnoel1/VAEEG.git
 cd VAEEG
 
 # Create virtual environment
-python -m venv venvs/vaeeg
-source venvs/vaeeg/bin/activate
+python -m venv myenv
+source myenv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
@@ -114,6 +114,8 @@ python scripts/train_vae.py \
     --band_name "alpha"
 ```
 Settings such as the training mode (VAE or DAE) and checkpoint save paths can be configured in the [`train.yaml`](configs/train.yaml) file.
+
+**Output** `.ckpt` files in corresponding directory. 
 
 ## Evaluation
 
