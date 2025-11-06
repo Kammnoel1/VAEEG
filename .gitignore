@@ -25,6 +25,10 @@ src/analysis/
 src/classifier/
 # Ignore plotting scripts 
 src/plotting/
+# Ignore lighten package files 
+src/lighten/
+# Ignore eeg-info
+src/your_project_name.egg-info/
 # Ignore test file 
 test.py
 src/test.py
