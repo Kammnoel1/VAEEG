@@ -1,6 +1,0 @@
-mne
-numpy
-pandas
-joblib
-tqdm
-interval3
