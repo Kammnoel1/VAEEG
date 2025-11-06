@@ -17,6 +17,8 @@ __pycache__/
 src/temp_scripts/
 # Ignore temporary model checkpoints
 /models/
+weights/**/save/
+/models_new/
 # Ignore build 
 /build/
 # Ignore TensorBoard logs
@@ -40,10 +42,6 @@ test.py
 src/test.py
 # Ignore pdf files 
 *.pdf
-# Ignore checkpoint files
-*.ckpt
-# Ignore csv files 
-*.csv
 # Ignore Tensorboard log files 
 events.out.tfevents.*
 # Ignore png files 
