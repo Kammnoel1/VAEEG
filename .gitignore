@@ -11,12 +11,18 @@ vaeeg/
 *.pyc
 __pycache__/
 /logs/
+# Ignore figs 
+/figs/
 # Ignore temporary scripts
 src/temp_scripts/
 # Ignore temporary model checkpoints
 /models/
+# Ignore build 
+/build/
 # Ignore TensorBoard logs
 /tensorboard/
+# Ignore jupyter notebook files
+/jupyter_notebooks/
 # Ignore sbatch files 
 /sbatches/
 # Ignore analysis files 
@@ -44,7 +50,5 @@ src/test.py
 events.out.tfevents.*
 # Ignore png files 
 *.png
-# Ignore jupyter files 
-*.ipynb
 # Ignore jupyter notebook checkpoints
 .ipynb_checkpoints/
