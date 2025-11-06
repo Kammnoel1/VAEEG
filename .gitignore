@@ -38,8 +38,6 @@ src/your_project_name.egg-info/
 # Ignore test file 
 test.py
 src/test.py
-# Ignore yaml files 
-*.yaml
 # Ignore pdf files 
 *.pdf
 # Ignore checkpoint files
