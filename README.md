@@ -4,7 +4,7 @@ A deep learning framework for analyzing EEG data using Variational Autoencoders 
 
 ## Overview
 
-This project implements a VAE/AE architecture designed specifically for EEG signal analysis. The model processes EEG data across five frequency bands (delta, theta, alpha, low beta, high beta) to learn compact latent representations that can be used for seizure detection and analysis.
+This project implements a VAE/DAE architecture designed specifically for EEG signal analysis. The model processes EEG data across five frequency bands (delta, theta, alpha, low beta, high beta) to learn compact latent representations that can be used for seizure detection and analysis.
 
 ## Features
 
@@ -26,7 +26,7 @@ VAEEG/
 ├── configs/              # Configuration files
 │   ├── train.yaml
 │   └── test.yaml
-├── scripts/              # Main processing scripts
+├── scripts/              
 │   ├── gen_data.py       # EDF to clip generation with labels
 │   ├── split_dataset.py  # Train/test split with label tracking
 │   ├── train_vae.py      # Model training
@@ -113,6 +113,7 @@ python scripts/train_vae.py \
     --z_dim 50 \
     --band_name "alpha"
 ```
+Settings such as the training mode (VAE or DAE) and checkpoint save paths can be configured in the [`train.yaml`](configs/train.yaml) file.
 
 ## Evaluation
 

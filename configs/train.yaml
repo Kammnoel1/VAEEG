@@ -18,7 +18,7 @@ Train:
 # Model: Model architecture parameters.
 Model:
   # Number of input channels (for single-channel EEG)
-  in_channels: 19
+  in_channels: 1
   # Negative slope for LeakyReLU activations
   negative_slope: 0.2
   # Whether the decoder uses a final LSTM layer (set to false if not desired)
