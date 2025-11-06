@@ -35,7 +35,6 @@ VAEEG/
 │   ├── model/
 │   │   ├── net/          # Model architectures
 │   │   │   ├── modelA.py         
-│   │   │   ├── old_modelA.py     
 │   │   │   └── layers.py        
 │   │   └── opts/         # Training utilities
 │   │       ├── dataset.py       
