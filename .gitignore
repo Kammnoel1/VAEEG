@@ -48,3 +48,5 @@ events.out.tfevents.*
 *.png
 # Ignore jupyter notebook checkpoints
 .ipynb_checkpoints/
+# Ignore MacOS system files 
+.DS_Store

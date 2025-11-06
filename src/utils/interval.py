@@ -5,7 +5,7 @@ from functools import partial
 import numpy as np
 from interval3 import Interval
 
-from .check import check_type
+from src.utils.check import check_type
 
 __all__ = ["Interval", "IntervalSet", "find_continuous_area_1d", "find_continuous_area_2d",
            "merge_continuous_area", "merge_continuous_area_multi"]

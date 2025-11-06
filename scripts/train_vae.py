@@ -16,11 +16,11 @@ import torch.distributed as dist
 _CURRENT_DIR = os.path.abspath(os.path.dirname(__file__))
 sys.path.append(_CURRENT_DIR)
 
-from model.opts.dataset import ClipDataset
-from model.opts.ckpt import save_model, init_model
-from model.opts.viz import batch_imgs
-from model.net.modelA import VAEEG
-from model.net.losses import recon_loss, kl_loss
+from src.model.opts.dataset import ClipDataset
+from src.model.opts.ckpt import save_model, init_model
+from src.model.opts.viz import batch_imgs
+from src.model.net.modelA import VAEEG
+from src.model.net.losses import recon_loss, kl_loss
 
 torch.autograd.set_detect_anomaly(True)
 

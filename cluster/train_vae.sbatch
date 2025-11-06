@@ -49,4 +49,4 @@ export MASTER_PORT=29500
 
 
 # Run your pipeline script with the provided YAML configuration and z_dim.
-srun python -m src.train_vae --yaml_file train.yaml --z_dim 50 --band_name "high_beta"
+srun python scripts/train_vae.py --yaml_file configs/train.yaml --z_dim 50 --band_name "high_beta"

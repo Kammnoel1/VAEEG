@@ -47,4 +47,4 @@ export MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n1)
 export MASTER_PORT=29500
 
 # Run your test script with the provided YAML configuration and z_dim.
-srun python -m src.test_vae --yaml_file test.yaml --z_dim 32 --band_name "high_beta"
+srun python scripts/test_vae.py --yaml_file configs/test.yaml --z_dim 32 --band_name "high_beta"

@@ -4,8 +4,8 @@ import json
 from tqdm import tqdm
 import numpy as np
 import time 
-from lighten.utils.io import get_files
-from utils.labels import load_labels_csv
+from src.utils.io import get_files
+from src.utils.labels import load_labels_csv
 
 
 def merge_data_with_labels(input_paths, out_dir, labels_dir, label_map, n_jobs):

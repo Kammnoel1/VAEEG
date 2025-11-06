@@ -1,5 +1,5 @@
 import os, mne, re 
-from src.lighten.utils.check import check_type
+from src.utils.check import check_type
 
 def load_raw_(datafile_list, preload=False):
     """get raw

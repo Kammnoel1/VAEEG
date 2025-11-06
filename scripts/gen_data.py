@@ -10,10 +10,10 @@ from joblib import Parallel, delayed
 import mne
 import numpy as np
 import pandas as pd
-import lighten.utils.interval as lui
-from mne.filter import create_filter
+import src.utils.interval as lui
+from src.utils.io import load_raw_
 
-from lighten.utils.io import load_raw_
+from mne.filter import create_filter
 from tqdm import tqdm
 
 

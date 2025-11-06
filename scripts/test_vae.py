@@ -4,11 +4,12 @@ import yaml
 import torch
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
-from model.opts.dataset import ClipDataset
-from model.opts.ckpt import init_model
-from model.net.modelA import VAEEG
-from model.net.losses import recon_loss, kl_loss
-from model.opts.viz import batch_imgs
+
+from src.model.opts.dataset import ClipDataset
+from src.model.opts.ckpt import init_model
+from src.model.net.modelA import VAEEG
+from src.model.net.losses import recon_loss, kl_loss
+from src.model.opts.viz import batch_imgs
 
 def pearson_index(x, y, dim=-1):
     xy = x * y

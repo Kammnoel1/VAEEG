@@ -43,4 +43,4 @@ export PYTHONPATH=${SLURM_SUBMIT_DIR}/src:$PYTHONPATH
 export LD_LIBRARY_PATH=${CUDA_HOME}/extras/CUPTI/lib64:${LD_LIBRARY_PATH}
 
 # Run your pipeline script with the provided YAML configuration and z_dim.
-srun python -m src.gen_data --raw_base /ptmp/noka/raw_data/edf --out_base /ptmp/noka/new_data/multichannel/clips --labels_csv_path /ptmp/noka/labels/multichannel/labels.csv --n_jobs $SLURM_CPUS_PER_TASK
+srun python scripts/gen_data.py --raw_base /ptmp/noka/raw_data/edf --out_base /ptmp/noka/new_data/multichannel/clips --labels_csv_path /ptmp/noka/labels/multichannel/labels.csv --n_jobs $SLURM_CPUS_PER_TASK
