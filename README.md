@@ -1,5 +1,8 @@
 # Learning Latent Representations of EEG Signals Using Autoencoders
 
+[![Thesis PDF](https://img.shields.io/badge/Bachelor_Thesis-PDF-blue)](docs/Bachelorarbeit(Bsc)Kamm.pdf)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 A deep learning framework for analyzing EEG data using Variational Autoencoders (VAE) and Deterministic Autoencoders (DAE) to extract latent representations across different frequency bands for seizure detection.
 
 ## Overview
