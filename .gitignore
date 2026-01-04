@@ -40,8 +40,6 @@ src/your_project_name.egg-info/
 # Ignore test file 
 test.py
 src/test.py
-# Ignore pdf files 
-*.pdf
 # Ignore Tensorboard log files 
 events.out.tfevents.*
 # Ignore png files 
